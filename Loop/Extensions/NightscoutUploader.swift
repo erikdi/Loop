@@ -95,6 +95,10 @@ extension NightscoutUploader {
                     let amount = prime.dictionaryRepresentation["amount"]
                     let entry = NightscoutTreatment(timestamp: event.date, enteredBy: author, notes:  "Automatically added; Amount \(amount ?? 0) Units", eventType: "Site Change")
                     fakeEvents.append(entry)
+                case let alarm as PumpAlarmPumpEvent:
+                    let entry = NightscoutTreatment(timestamp: event.date, enteredBy: author,
+                                                    notes:  "Automatically added; PumpAlarm \(alarm.alarmType)", eventType: "Note")
+                    fakeEvents.append(entry)
                 default:
                     break
                 }
