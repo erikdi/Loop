@@ -111,7 +111,7 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
         }
     }
 
-    var appearedOnce = false
+    private var appearedOnce = false
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -243,6 +243,10 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
             }
         }
         //mealInformationNeedsUpdate = false
+    }
+
+    override func glucoseUnitDidChange() {
+        refreshContext = RefreshContext.all
     }
 
     private func updateChartDateRange() {
