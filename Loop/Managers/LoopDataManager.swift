@@ -363,7 +363,7 @@ extension LoopDataManager {
     ///
     /// - Parameter timeZone: The time zone
     func setScheduleTimeZone(_ timeZone: TimeZone) {
-        if timeZone != self.minimumBasalRateSchedule?.timeZone {
+        if timeZone != minimumBasalRateSchedule?.timeZone {
             AnalyticsManager.shared.punpTimeZoneDidChange()
             basalRateSchedule?.timeZone = timeZone
         }
@@ -720,7 +720,7 @@ extension LoopDataManager {
             
             updateGroup.leave()
         }
-        
+
         _ = updateGroup.wait(timeout: .distantFuture)
 
         guard let lastGlucoseDate = latestGlucoseDate else {
@@ -729,7 +729,6 @@ extension LoopDataManager {
             } else {
                 recommendedBolus = nil
             }
-            _ = updateGroup.wait(timeout: .distantFuture)
             throw LoopError.missingDataError(details: "Glucose data not available", recovery: "Check your CGM data source")
         }
 
@@ -747,8 +746,6 @@ extension LoopDataManager {
         }
 
         if glucoseMomentumEffect == nil {
-            updateGroup.enter()
-
             if let momentumInterval = momentumInterval, momentumInterval >= TimeInterval(minutes: 4) {
                 updateGroup.enter()
                 glucoseStore.getRecentMomentumEffect { (effects) -> Void in
@@ -815,6 +812,7 @@ extension LoopDataManager {
             }
 
             _ = updateGroup.wait(timeout: .distantFuture)
+
         }
 
         if carbEffect == nil {
@@ -849,7 +847,6 @@ extension LoopDataManager {
             }
         }
 
-        
         _ = updateGroup.wait(timeout: .distantFuture)
 
         if retrospectivePredictedGlucose == nil {
