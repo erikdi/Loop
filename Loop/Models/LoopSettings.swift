@@ -38,6 +38,7 @@ struct LoopSettings {
     let insulinIncrementPerUnit: Double = 10  // 0.1 steps in basal and bolus
     
     let absorptionTimeOverrun = 1.25
+    let absorptionTimeMultiplier = 0.8
 }
 
 

@@ -42,7 +42,7 @@ extension AbsorptionSpeed {
     }
     
     var minutes : Double {
-        let multiplier = UserDefaults.appGroup.absorptionTimeMultiplier
+        let multiplier = LoopSettings().absorptionTimeMultiplier
         switch(self) {
         case .ultraFast:
                 return round(multiplier * 90)

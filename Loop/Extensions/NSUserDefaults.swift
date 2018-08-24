@@ -337,7 +337,6 @@ extension UserDefaults {
         case pumpDetachedMode = "com.loopkit.Loop.pumpDetachedMode"
         case lastUploadedNightscoutProfile = "com.loopkit.Loop.lastUploadedNightscoutProfile"
         case pendingTreatments = "com.loopkit.Loop.pendingTreatments"
-        case absorptionTimeMultiplier = "com.loopkit.Loop.absorptionTimeMultiplier"
     }
 
     var minimumBasalRateSchedule: BasalRateSchedule? {
@@ -427,20 +426,6 @@ extension UserDefaults {
             } else {
                 set(newValue?.timeIntervalSinceReferenceDate, forKey: PrivateKey.pumpDetachedMode.rawValue)
             }
-        }
-    }
-    
-    var absorptionTimeMultiplier : Double {
-        get {
-            let value = double(forKey: PrivateKey.absorptionTimeMultiplier.rawValue)
-            // default
-            if value <= 0.0 {
-                return 0.9
-            }
-            return value
-        }
-        set {
-            set(newValue, forKey: PrivateKey.absorptionTimeMultiplier.rawValue)
         }
     }
 
