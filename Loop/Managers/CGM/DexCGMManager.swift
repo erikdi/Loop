@@ -236,9 +236,23 @@ final class G5CGMManager: DexCGMManager, TransmitterDelegate {
     }
 
     func transmitter(_ transmitter: Transmitter, didReadBackfill glucose: [Glucose]) {
-        for g in glucose.sorted(by: { $0.readDate < $1.readDate }) {
-            self.transmitter(transmitter, didRead: g)
+        let samples = glucose.compactMap { (glucose) -> (quantity: HKQuantity, date: Date, isDisplayOnly: Bool)? in
+            guard glucose != latestReading, glucose.state.hasReliableGlucose, let quantity = glucose.glucose else {
+                return nil
+            }
+
+            return (
+                date: glucose.readDate,
+                quantity: quantity,
+                isDisplayOnly: glucose.isDisplayOnly
+            )
         }
+
+        guard samples.count > 0 else {
+            return
+        }
+
+        self.delegate?.cgmManager(self, didUpdateWith: .newData(samples))
     }
 
     func transmitter(_ transmitter: Transmitter, didReadUnknownData data: Data) {
