@@ -5,37 +5,37 @@
   "watchOS" : [
     {
       "name" : "RileyLinkBLEKit",
-      "hash" : "c94d79d1403870df4539dd531024d5b44333642f28d49f8e9f4e26fbad42fd7a"
+      "hash" : "2093900985a5101282937acc1ae0b4658d1fa506e72ba435b42e0f5d6f95f8e0"
     }
   ],
   "tvOS" : [
 
   ],
-  "commitish" : "v2.0.0",
+  "commitish" : "v2.0.2",
   "iOS" : [
     {
       "name" : "Crypto",
-      "hash" : "03768a89eb61f55cc386ae4586048ae851d61373da6868aab905db2a2586efc7"
+      "hash" : "89f0e0f369ce31bc93f9f699a9f3159b72868a556c51b17299772fcbd9d591d9"
     },
     {
       "name" : "RileyLinkKitUI",
-      "hash" : "dc1035fdadd445d12f383f01c10225b62aa7eca1f4da9016420d1835487628bb"
+      "hash" : "f1f964a1caf48a604777211159d3cd08b126c948c95f9df36a4e59d1a138e421"
     },
     {
       "name" : "RileyLinkKit",
-      "hash" : "69fd21c5cd31ca8fe4611b01139780b1df32e71400a6fd91ebc865d85791b0a5"
+      "hash" : "930b94bcf4afe0b7ebf460c51e8ce37899f6888603659e2c174c8b233f045562"
     },
     {
       "name" : "NightscoutUploadKit",
-      "hash" : "d3fe0bc023a0a275dddec6bba616ff38239acf44ee71879e270a3f8690e4961d"
+      "hash" : "ef5a50c60816becfaa5df4b7dd073c2967c4f19dee4a4993e85d3d9632951d52"
     },
     {
       "name" : "RileyLinkBLEKit",
-      "hash" : "a95573627d6ad9a853c620938e53e97d4c054553fde4af097a489038b020fd2f"
+      "hash" : "46a9977de96d95b2241758dee721adac6a46645742717d3e5c13930f05c7b06f"
     },
     {
       "name" : "MinimedKit",
-      "hash" : "c5f8ad60aea1a15646ed78afcb485435b55cb6e5b54d7d299d2415e5fa74cf38"
+      "hash" : "a44f2f85abe17cafcbc44b70775943a6d5f25ce6ab8a47fed93ceddf2e4149a8"
     }
   ]
 }
