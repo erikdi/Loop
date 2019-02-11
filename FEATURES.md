@@ -96,6 +96,9 @@ see [TODO](/TODO.md) for planned features
 - Logs customs notes
 - Treats "Canula fill" as a Site Change
 - Treats "Reservoir fill" as an Insulin Change
+- Consider using the forked Nightscout version to get filtering
+  of the log entries:
+  https://github.com/erikdi/cgm-remote-monitor/tree/erikdi/dev
 
 ## Logging of current Profile to Nightscout
 
