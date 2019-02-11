@@ -337,6 +337,7 @@ extension UserDefaults {
         case pumpDetachedMode = "com.loopkit.Loop.pumpDetachedMode"
         case lastUploadedNightscoutProfile = "com.loopkit.Loop.lastUploadedNightscoutProfile"
         case pendingTreatments = "com.loopkit.Loop.pendingTreatments"
+        case G5SessionStartDate = "com.loopkit.Loop.G5SessionStartDate"
     }
 
     var minimumBasalRateSchedule: BasalRateSchedule? {
@@ -425,6 +426,24 @@ extension UserDefaults {
                 removeObject(forKey: PrivateKey.pumpDetachedMode.rawValue)
             } else {
                 set(newValue?.timeIntervalSinceReferenceDate, forKey: PrivateKey.pumpDetachedMode.rawValue)
+            }
+        }
+    }
+
+    var G5SessionStartDate: Date? {
+        get {
+            let value = double(forKey: PrivateKey.G5SessionStartDate.rawValue)
+            if value > 0 {
+                return Date(timeIntervalSinceReferenceDate: value)
+            } else {
+                return nil
+            }
+        }
+        set {
+            if newValue == nil {
+                removeObject(forKey: PrivateKey.G5SessionStartDate.rawValue)
+            } else {
+                set(newValue?.timeIntervalSinceReferenceDate, forKey: PrivateKey.G5SessionStartDate.rawValue)
             }
         }
     }

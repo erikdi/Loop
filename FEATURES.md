@@ -129,6 +129,10 @@ see [TODO](/TODO.md) for planned features
 
 -  Triggered if either Glucose or Rileylink is missing.  Not super reliable.
 
+## Logging of G5/6 Sensor information
+
+-  Logs sensor start date and calibration information to Nightscout.
+
 # Additional Features for consideration
 
 ## Don't turn off bolus below min guard

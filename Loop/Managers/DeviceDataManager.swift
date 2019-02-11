@@ -1040,45 +1040,26 @@ final class DeviceDataManager {
     }
     
     // MARK - CGM State
-    private var lastG5CalibrationOkay : Date? = nil
-    private var lastG5NeedsCalibration : Date? = nil
-    private var G5recentCalibration = 0
     private var lastG5SessionStart : Date? = nil
-    
-    public var cgmCalibrated : Bool {
-        guard let cgmSource = UserDefaults.standard.cgm else {
-            return true
-        }
-        switch(cgmSource) {
-        case .g4: return true
-        case .enlite: return true
-        case .g5: return lastG5NeedsCalibration == nil // todo also check for okay? doesn't work with share...
-        }
-    }
+    private var lastG5TransmitterStart : Date? = nil
+
     
     func updateCGMState() {
-//        guard let glucose = cgmManager?.latestG5Reading else {
-//            loopManager.updateCgmCalibrationState(cgmCalibrated)
-//            return
-//        }
-//        NSLog("G5 Latest Reading", glucose)
-//        if glucose.state == .ok {
-//            lastG5CalibrationOkay = glucose.readDate
-//            if let need = lastG5NeedsCalibration, need.timeIntervalSinceNow < TimeInterval(minutes: -15) {
-//                loopManager.addInternalNote("updateCGMState - cleared recent calibration.")
-//                lastG5NeedsCalibration = nil
-//            }
-//
-//        }
-//        if glucose.state == .needCalibration || glucose.state == .needFirstInitialCalibration || glucose.state == .needSecondInitialCalibration {
-//            if lastG5NeedsCalibration == nil {
-//                loopManager.addInternalNote("updateCGMState - need calibration - \(glucose.state.description)")
-//            }
-//            lastG5NeedsCalibration = glucose.readDate
-//        }
-//        lastG5SessionStart = glucose.sessionStartDate
-//
-//        loopManager.updateCgmCalibrationState(cgmCalibrated)
+        guard let glucose = cgmManager?.latestG5Reading else {
+            return
+        }
+        let sessionStart = glucose.sessionStartDate
+        let transmitterStart = glucose.activationDate
+        let transmitterID = glucose.transmitterID
+        let transmitterState = glucose.status
+        if UserDefaults.appGroup.G5SessionStartDate != sessionStart {
+            loopManager.addSensorStart(sessionStart, "Transmitter Start \(transmitterStart), Status \(transmitterState), ID \(transmitterID)")
+            UserDefaults.appGroup.G5SessionStartDate = sessionStart
+        }
+
+        if !glucose.state.hasReliableGlucose {
+            loopManager.addInternalNote("Glucose Unreliable \(glucose.readDate), State \(glucose.state)")
+        }
     }
 }
 

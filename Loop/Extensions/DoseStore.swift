@@ -17,6 +17,9 @@ public enum FakeEventTypes: UInt8 {
     case bgReceived = 0xfb
     case debug = 0xfa
     case batteryChange = 0xf9
+    case sensorStart = 0xf8
+    case sensorStop = 0xf7
+    case sensorChange = 0xf6
 }
 
 final class PendingTreatmentsQueueManager: IdentifiableClass {
@@ -148,8 +151,8 @@ extension LoopDataManager {
     
     // Modifications to handle more logging events from App in Nightscout
     //
-    private func addFakeEvent(_ eventType: FakeEventTypes, _ note: String) {
-        let date = Date()
+    private func addFakeEvent(_ eventType: FakeEventTypes, _ note: String, _ eventDate: Date? = nil) {
+        let date = eventDate ?? Date()
         
         let author = "loop://\(UIDevice.current.name)"
         let id = PendingTreatmentsQueueManager.shared.generation
@@ -176,6 +179,12 @@ extension LoopDataManager {
                 treatment = NightscoutTreatment(timestamp: date, enteredBy: author, notes:  "Automatically added: \(note) \(uid)", eventType: "Site Change")
             case .batteryChange:
                 treatment = NightscoutTreatment(timestamp: date, enteredBy: author, notes:  "Automatically added: \(note) \(uid)", eventType: "Pump Battery Change")
+            case .sensorStart:
+                treatment = NightscoutTreatment(timestamp: date, enteredBy: author, notes:  "Automatically added: \(note) \(uid)", eventType: "Sensor Start")
+            case .sensorChange:
+                treatment = NightscoutTreatment(timestamp: date, enteredBy: author, notes:  "Automatically added: \(note) \(uid)", eventType: "Sensor Change")
+            case .sensorStop:
+                treatment = NightscoutTreatment(timestamp: date, enteredBy: author, notes:  "Automatically added: \(note) \(uid)", eventType: "Sensor Stop")
             case .bgReceived:
                 let parts = note.split(separator: " ", maxSplits: 1)
                 let amount = Int(parts[0]) ?? 0
@@ -249,7 +258,7 @@ extension LoopDataManager {
         NSLog("addDebugNote: \(text)")
         addFakeEvent(.debug, "DEBUG \(text)")
     }
-    
+
     public func addInsulinChange(_ text: String) {
         addFakeEvent(.insulinChange, text)
     }
@@ -257,12 +266,16 @@ extension LoopDataManager {
     public func addSiteChange(_ text: String) {
         addFakeEvent(.siteChange, text)
     }
-    
+
     public func addBGReceived(bloodGlucose: Int, comment: String = "") {
         addFakeEvent(.bgReceived, "\(bloodGlucose) \(comment)")
     }
     
     public func addBatteryChange(_ text: String) {
         addFakeEvent(.batteryChange, text)
+    }
+
+    public func addSensorStart(_ date: Date, _ note: String) {
+        addFakeEvent(.sensorStart, note, date)
     }
 }
