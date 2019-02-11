@@ -226,6 +226,11 @@ SWIFT_CLASS("_TtC9CGMBLEKit17PeripheralManager")
 @end
 
 
+@interface PeripheralManager (SWIFT_EXTENSION(CGMBLEKit))
+@property (nonatomic, readonly, copy) NSString * _Nonnull debugDescription;
+@end
+
+
 
 
 
