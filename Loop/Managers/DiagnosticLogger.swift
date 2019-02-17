@@ -109,7 +109,10 @@ final class CategoryLogger {
     private func loopLog(_ type: OSLogType, message: [String: Any]) {
         loopLog(type, message: message.debugDescription)
     }
-    
+
+    private var lastMessage : String = ""
+    private var duplicateMessageCount = 0
+
     private func loopLog(_ type: OSLogType, message: String) {
         if let loop = self.logger.loopManager {
             if category == "NightscoutUploader" {
@@ -130,6 +133,20 @@ final class CategoryLogger {
             if message.range(of: "NSURLErrorDomain") != nil {
                 return
             }
+            if message.range(of: "updatePredicted getLoopState") != nil {
+                NSLog("\(type.tagName) \(message)")
+                return
+            }
+            if (message == lastMessage) {
+                duplicateMessageCount += 1
+                return
+            } else {
+                if (duplicateMessageCount > 0) {
+                    loop.addDebugNote("Logger: x\(duplicateMessageCount): \(message)")
+                }
+                duplicateMessageCount = 0
+            }
+            lastMessage = message
             loop.addDebugNote("Logger: \(category) \(type.tagName) \(message)")
         }
     }
