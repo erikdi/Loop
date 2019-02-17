@@ -42,8 +42,13 @@ static BluetoothManagerHandler *_handler = nil;
         if (![b load]) {
             NSLog(@"Error"); // maybe throw an exception
         } else {
-            _bluetoothManager = [NSClassFromString(@"BluetoothManager") valueForKey:@"sharedInstance"];
-            _handler = [[BluetoothManagerHandler alloc] init];
+            @try {
+               _bluetoothManager = [NSClassFromString(@"BluetoothManager") valueForKey:@"sharedInstance"];
+               _handler = [[BluetoothManagerHandler alloc] init];
+            }
+            @catch(NSException *e ) {
+                NSLog(@"Gosh!!! Error initializing BluetoothManager!! %@ %@ %@", [e name], [e reason], [e callStackSymbols]);
+            }
         }
     }
     //});
