@@ -2,6 +2,9 @@
 
 see [TODO](/TODO.md) for planned features
 
+You likely also want a patched Nightscout version to ignore the extra log entries
+https://github.com/erikdi/cgm-remote-monitor/tree/erikdi/dev .
+
 ## Screenshots worth a thousand words
 
 <a href='/Documentation/Screenshots%20Features/Foodpicker%20-%20Camera.png'><img src='/Documentation/Screenshots%20Features/Foodpicker%20-%20Camera.png?raw=true' alt='Documentation/Screenshots%20Features/Foodpicker%20-%20Camera.png' width='170'></a>
