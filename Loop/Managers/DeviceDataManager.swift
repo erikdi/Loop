@@ -1163,8 +1163,8 @@ extension DeviceDataManager: LoopDataManagerDelegate {
             } catch let error {
                 //                notify(.failure(error))
                 let str = "\(error)"
-                
-                if attempt < 6, !str.contains("Bolus in progress") {
+                // 6 seems rather high as setTempBasal already does 3 retries.
+                if attempt < 3, !str.contains("Bolus in progress") {
                     // typically sequence might be:
                     // Error: unexpectedResponse(PumpMessage(carelink, getPumpModel, 355347, 0903373534000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000), PumpMessage(carelink, powerOn, 355347, 00)),
                     // Error: rileyLinkTimeout, attempt 2
@@ -1175,6 +1175,7 @@ extension DeviceDataManager: LoopDataManagerDelegate {
                     let nextAttempt = attempt + 1
                     self.logger.addError("\(error), attempt \(nextAttempt)", fromSource: "internalSetTempBasal")
                     self.internalSetTempBasal(manager, basal, attempt: nextAttempt, completion: completion)
+                    return
                 } else {
                     completion(.failure(error))
                 }
