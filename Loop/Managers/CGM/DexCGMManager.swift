@@ -177,7 +177,7 @@ final class G5CGMManager: DexCGMManager, TransmitterDelegate {
             completion(.noData)
             return
         }
-
+        NSLog("G5CGMManager data is stale, fetch from Share: \(String(describing: latestReading))")
         super.fetchNewDataIfNeeded(with: deviceManager, completion)
     }
 
