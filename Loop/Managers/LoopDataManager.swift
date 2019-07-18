@@ -1592,7 +1592,8 @@ final class LoopDataManager {
             if recommendation > 0 {
                 self.addInternalNote("recommendBolusCarbOnly - Ratio \(carbRatio) - Carbs \(carbs) - Since \(since) - recommendation \(recommendation) U, limited to \(safeRecommendation) U.")
             }
-            return BolusRecommendation(amount: safeRecommendation, pendingInsulin: pendingInsulin, notice: .carbOnly(carbs: carbs))
+            return BolusRecommendation(amount: safeRecommendation, pendingInsulin: pendingInsulin,
+                                       notice: .carbOnly(carbs: carbs, originalAmount: (safeRecommendation < recommendation) ? recommendation : nil))
         } catch {
             return nil
         }
