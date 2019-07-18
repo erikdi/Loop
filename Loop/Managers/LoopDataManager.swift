@@ -372,6 +372,7 @@ final class LoopDataManager {
             self.dataAccessQueue.async {
                 let requestDate = self.lastRequestedBolus?.date ?? date
                 self.lastPendingBolus = (units: units, date: requestDate, reservoir: self.doseStore.lastReservoirValue, event: event)
+                self.logger.info("new pending Bolus \(units) U, StartDate: \(String(describing: event.dose?.startDate)), EndDate \(String(describing: event.dose?.endDate))")
                 self.lastRequestedBolus = nil
                 self.lastFailedBolus = nil
                 self.lastAutomaticBolus = date  // keep this as a date, irrespective of automatic or not
@@ -1586,10 +1587,12 @@ final class LoopDataManager {
         let recommendation = round(carbs / carbRatio * 10) / 10
         do {
             let pendingInsulin = try self.getPendingInsulin()
+
+            let safeRecommendation = Swift.min(settings.maximumBolus ?? 0, recommendation)
             if recommendation > 0 {
-               self.addInternalNote("recommendBolusCarbOnly - Ratio \(carbRatio) - Carbs \(carbs) - Since \(since) - recommendation \(recommendation) U")
+                self.addInternalNote("recommendBolusCarbOnly - Ratio \(carbRatio) - Carbs \(carbs) - Since \(since) - recommendation \(recommendation) U, limited to \(safeRecommendation) U.")
             }
-            return BolusRecommendation(amount: recommendation, pendingInsulin: pendingInsulin, notice: .carbOnly(carbs: carbs))
+            return BolusRecommendation(amount: safeRecommendation, pendingInsulin: pendingInsulin, notice: .carbOnly(carbs: carbs))
         } catch {
             return nil
         }

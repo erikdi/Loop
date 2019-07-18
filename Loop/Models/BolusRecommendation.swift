@@ -15,7 +15,7 @@ enum BolusRecommendationNotice {
     case glucoseBelowSuspendThreshold(minGlucose: GlucoseValue)
     case currentGlucoseBelowTarget(glucose: GlucoseValue)
     case predictedGlucoseBelowTarget(minGlucose: GlucoseValue)
-    case carbOnly(carbs: Double)
+    case carbOnly(carbs: Double, originalAmount: Double?)
 }
 
 
@@ -39,9 +39,13 @@ extension BolusRecommendationNotice {
             let glucoseFormatter = NumberFormatter.glucoseFormatter(for: unit)
             let minBGStr = glucoseFormatter.describingGlucose(minGlucose.quantity, for: unit)!
             return String(format: NSLocalizedString("Predicted glucose at %1$@ is %2$@.", comment: "Message when offering bolus recommendation even though bg is below range and minBG is in future. (1: glucose time)(2: glucose number)"), time, minBGStr)
-        case .carbOnly(carbs: let carbs):
+        case .carbOnly(carbs: let carbs, originalAmount: let originalAmount):
             let carbsRounded = round(carbs)
-            return String(format: NSLocalizedString("No glucose, recommendation based on \(carbsRounded) g of carbs since last bolus.", comment: "Notice message when recommending bolus when no glucose is available. (1: carb amount in gram)"))
+            if let amount = originalAmount  {
+                return String(format: NSLocalizedString("No glucose, recommendation based on \(carbsRounded) g of carbs since last bolus. Exceeds maximum Bolus, was \(amount) Units!", comment: "Notice message when recommending bolus when no glucose is available. (1: carb amount in gram. 2: original amount of Insulin.)"))
+            } else {
+                return String(format: NSLocalizedString("No glucose, recommendation based on \(carbsRounded) g of carbs since last bolus.", comment: "Notice message when recommending bolus when no glucose is available. (1: carb amount in gram)"))
+            }
             
         }
     }
