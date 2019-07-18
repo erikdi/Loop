@@ -1,5 +1,5 @@
 github "erikdi/LoopKit" == 1.5.6
-github "erikdi/CGMBLEKit" "v2.1.1backport1"
+github "erikdi/CGMBLEKit" "v2.1.1backport2"
 github "erikdi/SwiftCharts" == 0.6.2
 github "erikdi/dexcom-share-client-swift" == 0.4.1
 github "erikdi/G4ShareSpy" == 0.3.3
