@@ -700,7 +700,7 @@ final class DeviceDataManager {
         var shouldReadReservoir = isReservoirDataOlderThan(timeIntervalSinceNow: .minutes(-10))
         var reservoirError : Error? = nil
         if loopManager.doseStore.lastReservoirVolumeDrop < 0 {
-            reservoirError = LoopError.invalidData(details: "Last Reservoir drop negative.")
+            reservoirError = LoopError.invalidData(details: "Last Reservoir drop negative: \(loopManager.doseStore.lastReservoirVolumeDrop) U.")
             shouldReadReservoir = true
         } else if let reservoir = loopManager.doseStore.lastReservoirValue, reservoir.startDate.timeIntervalSinceNow <=
             -loopManager.recencyInterval {
@@ -719,6 +719,11 @@ final class DeviceDataManager {
             }
 
             if shouldReadReservoir {
+                if let e = reservoirError {
+                    self.logger.addError(e, fromSource: "BolusReservoir")
+                } else {
+                    self.logger.addError("Reservoir data too old", fromSource: "BolusReservoir")
+                }
                 do {
                     StatisticsManager.shared.inc("Bolus Read Reservoir")
                     let reservoir = try session.getRemainingInsulin()
@@ -728,16 +733,21 @@ final class DeviceDataManager {
                         notify(SetBolusError.certain(error))
                         return
                     }
-
+                    let semaphore = DispatchSemaphore(value: 0)
+                    var success = false
                     self.loopManager.addReservoirValue(reservoir.units, at: reservoir.clock.date!) { (result) in
                         switch result {
                         case .failure(let error):
-                            self.logger.addError(error, fromSource: "Bolus")
+                            self.logger.addError(error, fromSource: "BolusAddReservoir")
+                            notify(error)
                         case .success:
-                            //break
-                            notify(reservoirError)
-                            return
+                            success = true
                         }
+                        semaphore.signal()
+                    }
+                    semaphore.wait()
+                    if (!success) {
+                        return
                     }
                 } catch let error as PumpOpsError {
                     self.logger.addError("Failed to fetch pump status: \(error)", fromSource: "enactBolus")
@@ -757,7 +767,6 @@ final class DeviceDataManager {
                     return
                 }
             }
-            
 
             let semaphore = DispatchSemaphore(value: 0)
             self.loopManager.addRequestedBolus(units: units, at: Date()) {
