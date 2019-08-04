@@ -1306,7 +1306,7 @@ final class LoopDataManager {
     private var lastCarbChange : Date? = nil
     
     private func roundInsulinUnits(_ units: Double) -> Double {
-        return round(units * settings.insulinIncrementPerUnit)/settings.insulinIncrementPerUnit
+        return floor(units * settings.insulinIncrementPerUnit)/settings.insulinIncrementPerUnit
     }
     
     private func setAutomatedBolus(_ completion: @escaping (_ error: Error?) -> Void) {
@@ -1584,7 +1584,7 @@ final class LoopDataManager {
         }
         updateGroup.wait()
         let carbRatio = carbRatioRange.quantity(at: Date()).doubleValue(for: HKUnit.gram())
-        let recommendation = round(carbs / carbRatio * 10) / 10
+        let recommendation = floor(carbs / carbRatio * 10) / 10
         do {
             let pendingInsulin = try self.getPendingInsulin()
 

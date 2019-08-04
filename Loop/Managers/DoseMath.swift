@@ -102,7 +102,7 @@ extension InsulinCorrection {
         let netUnits = self.units - pendingInsulin
         var units = Swift.min(maxBolus, Swift.max(0, netUnits))
         units = Swift.min(units, Swift.max(0, maxInsulinOnBoard - insulinOnBoard))
-        units = round(units * minimumProgrammableIncrementPerUnit) / minimumProgrammableIncrementPerUnit
+        units = floor(units * minimumProgrammableIncrementPerUnit) / minimumProgrammableIncrementPerUnit
         var target : HKQuantity?
         var minPrediction : GlucoseValue?
         
