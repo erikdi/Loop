@@ -41,7 +41,8 @@ struct TreatmentInformation {
     var message : String = ""
     
     var reservoir: ReservoirValue? = nil
-    
+    var attempts: Int? = 0
+
     func equal(_ other: TreatmentInformation) -> Bool {
         return state == other.state && date == other.date && units == other.units && message == other.message && allowed == other.allowed
     }
@@ -58,8 +59,9 @@ struct TreatmentInformation {
             
         case .sent: return "Pending"
         case .pending: return "Delivering"
+
         case .maybefailed: return "Maybe failed"
-            
+
         case .failed: return "Failed"
         case .success: return "Successful"
         case .timeout: return "Timed out"
@@ -100,7 +102,7 @@ struct TreatmentInformation {
         case .pending:
             val = "(can turn phone off)."
         case .maybefailed:
-            val = "Please wait!"
+            val = "Check pump!"
             
         case .failed:
             val = "Pump in reach?"
@@ -112,6 +114,9 @@ struct TreatmentInformation {
         }
         if message != "" {
             val = "\(val) - \(message)"
+        }
+        if let a = attempts, a > 1 {
+            val = "\(val) [#\(a)]"
         }
         return val
     }

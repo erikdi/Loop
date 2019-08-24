@@ -784,8 +784,7 @@ final class DeviceDataManager {
                         // self.triggerPumpDataRead()
                         notify(nil)
                     }
-                    // retry = false
-                    return
+                    retry = false
                 } catch let error {
                     self.logger.addError(error, fromSource: "Bolus")
 
@@ -799,8 +798,7 @@ final class DeviceDataManager {
                                 // self.triggerPumpDataRead()
                                 notify(nil)
                             }
-                            // retry = false
-                            return
+                            retry = false
                         }
                     case  SetBolusError.uncertain(_):
                         if (str.contains("noResponse(") || str.contains("unknownResponse(")) && str.contains("powerOn") {
@@ -816,9 +814,14 @@ final class DeviceDataManager {
                         attempt += 1
                         self.logger.addError("Bolus failed: \(error.localizedDescription), retrying attempt \(attempt)", fromSource: "enactBolus")
                     } else {
-                        self.loopManager.addFailedBolus(units: units, at: Date(), error: error) {
-                            // self.triggerPumpDataRead()
-                            self.logger.addError("Bolus failed: \(error.localizedDescription)", fromSource: "enactBolus")
+
+                        self.loopManager.addFailedBolus(units: units, at: Date(), error: error, certain: !retry, attempts: attempt) {
+                            if !retry {
+                                // In case of an uncertain error, we need to read the pump data to make sure
+                                // we are not double bolusing.
+                                self.triggerPumpDataRead()
+                            }
+                            self.logger.addError("Bolus failed: \(error.localizedDescription) Retry \(retry) Attempt \(attempt)", fromSource: "enactBolus")
                             notify(error)
                         }
                         return

@@ -391,12 +391,15 @@ final class LoopDataManager {
         }
     }
 
-    func addFailedBolus(units: Double, at date: Date, error: Error, completion: (() -> Void)?) {
+    func addFailedBolus(units: Double, at date: Date, error: Error, certain: Bool, attempts: Int, completion: (() -> Void)?) {
         dataAccessQueue.async {
-            NSLog("Bolus Failed: \(units) \(date) \(error)")
-            self.lastFailedBolus = (units: units, date: date, error: error)
+            NSLog("addFailedBolus: \(units) U @ \(date), \(error), Certain: \(certain), #\(attempts)")
+            self.lastFailedBolus = (units: units, date: date, error: error, certain: certain, attempts: attempts)
+            self.lastRequestedBolus = nil
             self.lastPendingBolus = nil
-            self.recommendedBolus = nil
+            if (!certain) {
+                self.recommendedBolus = nil
+            }
             self.notify(forChange: .bolus)
             completion?()
         }
@@ -877,7 +880,7 @@ final class LoopDataManager {
     
     fileprivate var lastRequestedBolus: (units: Double, date: Date, reservoir: ReservoirValue?)?
     fileprivate var lastPendingBolus: (units: Double, date: Date, reservoir: ReservoirValue?, event: NewPumpEvent)?
-    fileprivate var lastFailedBolus: (units: Double, date: Date, error: Error)?
+    fileprivate var lastFailedBolus: (units: Double, date: Date, error: Error, certain: Bool, attempts: Int)?
     
     fileprivate var lastLoopCompleted: Date? {
         didSet {
@@ -1407,7 +1410,8 @@ final class LoopDataManager {
                                              sent: lastRequestedBolus.date,
                                              allowed: false,
                                              message: "",
-                                             reservoir: nil)
+                                             reservoir: nil,
+                                             attempts: nil)
             
         } else if let lastPendingBolus = lastPendingBolus, let dose = lastPendingBolus.event.dose, dose.endDate.timeIntervalSinceNow > TimeInterval(0)  {
             if let start = lastPendingBolus.reservoir, let current = doseStore.lastReservoirValue {
@@ -1422,7 +1426,8 @@ final class LoopDataManager {
                 sent: nil,
                 allowed: false,
                 message: message,
-                reservoir: nil)
+                reservoir: nil,
+                attempts: nil)
             
             
         } else if let lastPendingBolus = lastPendingBolus, lastPendingBolus.date.timeIntervalSinceNow > TimeInterval(minutes: -15)  {
@@ -1433,19 +1438,32 @@ final class LoopDataManager {
                                              sent: nil,
                                              allowed: allowed,
                                              message: message,
-                                             reservoir: nil)
+                                             reservoir: nil,
+                                             attempts: nil)
             
         } else if let lastFailedBolus = lastFailedBolus, lastFailedBolus.date.timeIntervalSinceNow > TimeInterval(minutes: -15)  {
-            treatment = TreatmentInformation(state: .failed,
+            if lastFailedBolus.certain {
+                treatment = TreatmentInformation(state: .failed,
                                              units: lastFailedBolus.units,
                                              carbs: 0.0,
                                              date: lastFailedBolus.date,
                                              sent: nil,
                                              allowed: allowed,
                                              message: lastFailedBolus.error.localizedDescription,
-                                             reservoir: nil)
-            
-        } else if let recommended = recommendedBolus, recommended.recommendation.amount >= settings.minimumRecommendedBolus {
+                                             reservoir: nil,
+                                             attempts: nil)
+            } else {
+                treatment = TreatmentInformation(state: .maybefailed,
+                                                 units: lastFailedBolus.units,
+                                                 carbs: 0.0,
+                                                 date: lastFailedBolus.date,
+                                                 sent: nil,
+                                                 allowed: allowed,
+                                                 message: lastFailedBolus.error.localizedDescription,
+                                                 reservoir: nil,
+                                                 attempts: nil)
+            }
+        } else if let recommended = recommendedBolus, recommended.recommendation.amount >= settings.minimumRecommendedBolus, allowed {
             treatment = TreatmentInformation(state: .recommended,
                                              units: recommended.recommendation.amount,
                                              carbs: 0.0,
@@ -1453,7 +1471,8 @@ final class LoopDataManager {
                                              sent: nil,
                                              allowed: allowed,
                                              message: message,
-                                             reservoir: nil)
+                                             reservoir: nil,
+                                             attempts: nil)
         } else if let low = lastLowNotification, low.date.timeIntervalSinceNow > TimeInterval(minutes: -15) {
             treatment = TreatmentInformation(state: .recommended,
                                              units: 0.0,
@@ -1462,7 +1481,8 @@ final class LoopDataManager {
                                              sent: nil,
                                              allowed: allowed,
                                              message: message,
-                                             reservoir: nil)
+                                             reservoir: nil,
+                                             attempts: nil)
             
 //        } else if let recommended = recommendedBolus, recommended.recommendation.netAmount < 0,
 //            let carbRatio = carbRatioSchedule?.value(at: recommended.date) {
@@ -1485,12 +1505,18 @@ final class LoopDataManager {
                                              sent: nil,
                                              allowed: allowed,
                                              message: message,
-                                             reservoir: nil)
+                                             reservoir: nil,
+                                             attempts: nil)
         } else {
-            treatment = TreatmentInformation(state: .none, units: 0, carbs: 0.0, date: now,
-                          sent: Date(), allowed: allowed,
-                          message: message,
-                          reservoir: nil)
+            treatment = TreatmentInformation(state: .none,
+                                             units: 0,
+                                             carbs: 0.0,
+                                             date: now,
+                                             sent: Date(),
+                                             allowed: allowed,
+                                             message: message,
+                                             reservoir: nil,
+                                             attempts: nil)
         }
         return treatment
     }
