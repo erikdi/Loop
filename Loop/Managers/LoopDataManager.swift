@@ -1451,7 +1451,7 @@ final class LoopDataManager {
                                              allowed: allowed,
                                              message: lastFailedBolus.error.localizedDescription,
                                              reservoir: nil,
-                                             attempts: nil)
+                                             attempts: lastFailedBolus.attempts)
             } else {
                 treatment = TreatmentInformation(state: .maybefailed,
                                                  units: lastFailedBolus.units,
@@ -1461,7 +1461,7 @@ final class LoopDataManager {
                                                  allowed: allowed,
                                                  message: lastFailedBolus.error.localizedDescription,
                                                  reservoir: nil,
-                                                 attempts: nil)
+                                                 attempts: lastFailedBolus.attempts)
             }
         } else if let recommended = recommendedBolus, recommended.recommendation.amount >= settings.minimumRecommendedBolus, allowed {
             treatment = TreatmentInformation(state: .recommended,
