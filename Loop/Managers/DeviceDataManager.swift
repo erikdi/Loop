@@ -815,7 +815,7 @@ final class DeviceDataManager {
                         self.logger.addError("Bolus failed: \(error.localizedDescription), retrying attempt \(attempt)", fromSource: "enactBolus")
                     } else {
 
-                        self.loopManager.addFailedBolus(units: units, at: Date(), error: error, certain: !retry, attempts: attempt) {
+                        self.loopManager.addFailedBolus(units: units, at: Date(), error: error, certain: retry, attempts: attempt) {
                             if !retry {
                                 // In case of an uncertain error, we need to read the pump data to make sure
                                 // we are not double bolusing.
