@@ -93,8 +93,8 @@
     
     "Pasta": {
         "categories": ["Lunch"],
-        "portion": 150,
-        "ratio": 29,
+        "portion": 200,
+        "ratio": 25,
         "absorption": "slow",
         "type": "continuous"
     },
@@ -124,24 +124,32 @@
     },
     
     "Tomatensuppe": {
-        "categories": ["Snack"],
+        "categories": ["Lunch"],
         "portion": 200,
-        "ratio": 5,
+        "ratio": 7,
         "type": "continuous"
     },
     
-    "Potatoes": {
-        "info": "1 Single Potatoe",
+    "2 Kartoffeln": {
+        "info": "ca. 2 Kartoffeln",
+        "image": "kartoffeln_zwei",
         "categories": ["Lunch"],
-        "portion": 75,
+        "portion": 160,
         "ratio": 15,
-        "type": "multiple"
+        "type": "continuous"
     },
     
     "Kartoffelbrei": {
         "categories": ["Lunch"],
-        "portion": 180,
-        "ratio": 11,
+        "portion": 200,
+        "ratio": 16,
+        "type": "continuous"
+    },
+
+    "Bratkartoffeln": {
+        "categories": ["Lunch"],
+        "portion": 200,
+        "ratio": 15,
         "type": "continuous"
     },
     
@@ -162,9 +170,10 @@
     
     "Pizza Slice": {
         "image": "Pizza",
+        "info": "ca. 1/4 25cm Pizza",
         "categories": ["Lunch"],
-        "portion": 107,
-        "ratio": 33,
+        "portion": 80,
+        "ratio": 25,
         "absorption": "slow",
         "type": "multiple"
     },
@@ -184,7 +193,6 @@
         "type": "continuous"
     },
 
-    
     "Spaetzle": {
         "image": "Spaetzle",
         "categories": ["Lunch"],
@@ -201,15 +209,6 @@
         "type": "single"
     },
     
-    "Crêpe Nutella": {
-        "image": "CrepeNutella",
-        "categories": ["Lunch"],
-        "portion": 120,
-        "ratio": 33,
-        "absorption": "fast",
-        "type": "single"
-    },
-    
     "Muesli, klein": {
         "categories": ["Breakfast"],
         "image": "Muesli",
@@ -220,42 +219,59 @@
         "type": "single"
     },
     
-    "Croissant": {
+    "Hoernchen": {
         "categories": ["Bakery"],
-        "portion": 80,
-        "ratio": 49,
+        "image": "schaer_croissant",
+        "portion": 55,
+        "ratio": 51,
         "type": "single"
     },
-    
-    "Halbes Nutella Croissant": {
+
+    "Bon Matin": {
         "categories": ["Bakery"],
-        "image": "NutellaCroissant",
-        "comment": "35g Croissant, 6g Nutella",
-        "portion": 40,
-        "ratio": 55,
-        "type": "single"
-    },
-    
-    "Halbe Semmel": {
-        "categories": ["Bakery"],
-        "image": "HalbeSemmel",
-        "portion": 35,
-        "ratio": 49,
-        "type": "single"
-    },
-    
-    "Semmel": {
-        "categories": ["Bakery"],
-        "portion": 70,
-        "ratio": 49,
-        "type": "single"
-    },
-    
-    "Brotscheibe": {
-        "categories": ["Bakery"],
-        "image": "BreadSlice",
+        "image": "schaer_bon_matin",
         "portion": 50,
-        "ratio": 44,
+        "ratio": 50,
+        "type": "single"
+    },
+
+    "Nutella Portion": {
+        "categories": ["Bakery"],
+        "image": "nutella_klein",
+        "portion": 6,
+        "ratio": 57,
+        "type": "single"
+    },
+    
+    "Ciabatta": {
+        "categories": ["Bakery"],
+        "image": "schaer_ciabatta",
+        "portion": 50,
+        "ratio": 46,
+        "type": "single"
+    },
+
+    "Hamburger": {
+        "categories": ["Bakery"],
+        "image": "schaer_hamburger",
+        "portion": 75,
+        "ratio": 45,
+        "type": "single"
+    },
+
+    "Weissbrot": {
+        "categories": ["Bakery"],
+        "image": "schaer_weissbrot",
+        "portion": 27,
+        "ratio": 45,
+        "type": "single"
+    },
+
+    "Landbrot": {
+        "categories": ["Bakery"],
+        "image": "schaer_landbrot",
+        "portion": 30,
+        "ratio": 40,
         "type": "single"
     },
     
@@ -298,7 +314,7 @@
         "absorption": "fast",
         "type": "multiple"
     },
-    
+
     "Brezel": {
         "categories": ["Bakery", "Lunch"],
         "portion": 80,
@@ -313,28 +329,16 @@
         "initial": 1,
         "type": "multiple"
     },
-    
-    "Duplo": {
-        "categories": ["Sweets"],
-        "portion": 10,
-        "ratio": 56,
+
+    "Apfelsine": {
+        "categories": ["Fruit"],
+        "image": "orange",
+        "portion": 130,
+        "ratio": 9,
+        "initial": 1,
         "type": "single"
     },
-    
-    "Hanuta": {
-        "categories": ["Sweets"],
-        "portion": 22,
-        "ratio": 50,
-        "type": "single"
-    },
-    
-    "Knoppers": {
-        "categories": ["Sweets"],
-        "portion": 25,
-        "ratio": 52,
-        "type": "single"
-    },
-    
+
     "Keks": {
         "categories": ["Sweets"],
         "portion": 20,
@@ -349,13 +353,22 @@
         "type": "single"
     },
     
-    "Smarties-Mini": {
+    "M&M'S Choco": {
         "categories": ["Sweets"],
-        "portion": 15,
-        "ratio": 75,
+        "image": "m-m_choco",
+        "portion": 45,
+        "ratio": 69,
         "type": "single"
     },
-    
+
+    "M&M'S Peanut": {
+        "categories": ["Sweets"],
+        "image": "m-m_peanut",
+        "portion": 45,
+        "ratio": 59,
+        "type": "single"
+    },
+
     "Fruchtjoghurt": {
         "categories": ["Snack"],
         "portion": 150,
@@ -369,12 +382,5 @@
         "ratio": 100,
         "type": "continuous"
     },
-    
-    "Photo": {
-        "categories": ["Custom", "Popular"],
-        "portion": 20,
-        "ratio": 100,
-        "type": "continuous"
-    }
     
 }
