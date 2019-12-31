@@ -1017,6 +1017,7 @@ final class DeviceDataManager {
         if let reservoir = loopManager?.doseStore.lastReservoirValue,
             reservoir.startDate.timeIntervalSinceNow <= TimeInterval(minutes: -30) {
             restartReason = "pump"
+
         } else if let glucose = loopManager?.glucoseStore?.latestGlucose,
             glucose.startDate.timeIntervalSinceNow <= TimeInterval(minutes: -30) {
             restartReason = "cgm"
@@ -1036,18 +1037,46 @@ final class DeviceDataManager {
             NSLog("maybeToggleBluetooth - \(source) - tried recently \(btMagicDate)")
             return
         }
+
         self.logger.addError("\(source) - Reason \(reason) - Restarting Bluetooth, no data for 30 minutes (could also be out of range)", fromSource: "maybeToggleBluetooth")
-        if let bluetoothManagerHandler = BluetoothManagerHandler.sharedInstance() {
-            self.logger.addError("disable", fromSource: "maybeToggleBluetooth")
-            bluetoothManagerHandler.disable()
-            bluetoothManagerHandler.setPower(false)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: {
-                self.logger.addError("ensable", fromSource: "maybeToggleBluetooth")
-                bluetoothManagerHandler.setPower(true)
-                bluetoothManagerHandler.enable()
-            })
-        } else {
-            self.logger.addError("BluetoothManagerHandler not available", fromSource: "maybeToggleBluetooth")
+
+        if reason == "pump" {
+            self.logger.addError("pump reconnect", fromSource: "maybeToggleBluetooth")
+            rileyLinkManager.getDevices { (devices) in
+                for device in devices {
+                    if self.connectedPeripheralIDs.contains(device.peripheralIdentifier.uuidString) {
+                        self.logger.addError("pump reconnect \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
+
+                        self.disconnectFromRileyLink(device)
+                        self.connectToRileyLink(device)
+                    } else {
+                        self.logger.addError("pump reconnect skip \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
+                    }
+                }
+            }
+
+        }
+        else if reason == "cgm" {
+            self.logger.addError("cgm re-setup", fromSource: "maybeToggleBluetooth")
+            setupCGM()
+            /*
+            if let bluetoothManagerHandler = BluetoothManagerHandler.sharedInstance() {
+                self.logger.addError("disable", fromSource: "maybeToggleBluetooth")
+                bluetoothManagerHandler.disable()
+                bluetoothManagerHandler.setPower(false)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: {
+                    self.logger.addError("ensable", fromSource: "maybeToggleBluetooth")
+                    bluetoothManagerHandler.setPower(true)
+                    bluetoothManagerHandler.enable()
+                })
+            } else {
+                self.logger.addError("BluetoothManagerHandler not available", fromSource: "maybeToggleBluetooth")
+            }
+            */
+        }
+        else {
+            self.logger.addError("BluetoothManagerHandler no valid reason: \(reason)", fromSource: "maybeToggleBluetooth")
+
         }
         btMagicDate = Date()
     }
