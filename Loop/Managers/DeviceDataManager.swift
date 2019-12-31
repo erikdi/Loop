@@ -1045,12 +1045,13 @@ final class DeviceDataManager {
             rileyLinkManager.getDevices { (devices) in
                 for device in devices {
                     if self.connectedPeripheralIDs.contains(device.peripheralIdentifier.uuidString) {
-                        self.logger.addError("pump reconnect \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
-
-                        self.disconnectFromRileyLink(device)
-                        self.connectToRileyLink(device)
+                        self.queue.async {
+                            self.logger.addError("pump reconnect async \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
+                            self.rileyLinkManager.disconnect(device)
+                            self.rileyLinkManager.connect(device)
+                        }
                     } else {
-                        self.logger.addError("pump reconnect skip \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
+                        self.logger.addError("pump not connected \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
                     }
                 }
             }
@@ -1130,6 +1131,7 @@ extension DeviceDataManager: CGMManagerDelegate {
         }
         updateCGMState()
         updateTimerTickPreference()
+        maybeToggleBluetooth("cgmManager")
     }
 
     func startDateToFilterNewData(for manager: CGMManager) -> Date? {
