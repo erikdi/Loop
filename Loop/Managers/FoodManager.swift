@@ -51,7 +51,7 @@ extension AbsorptionSpeed {
         case .normal:
                 return round(multiplier * 180)
         case .slow:
-                return round(multiplier * 240)
+                return round(multiplier * 300)
         }
     }
     var seconds : Double {
