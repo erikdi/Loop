@@ -1012,13 +1012,13 @@ final class DeviceDataManager {
     // MARK: - Bluetooth restart magic
     private var btMagicDate : Date = Date()
     func maybeToggleBluetooth(_ source: String, force: Bool = false) {
-
+      self.queue.async { // to avoid duplicate runs, btMagicDate.
         var restartReason : String? = nil
-        if let reservoir = loopManager?.doseStore.lastReservoirValue,
+        if let reservoir = self.loopManager?.doseStore.lastReservoirValue,
             reservoir.startDate.timeIntervalSinceNow <= TimeInterval(minutes: -30) {
             restartReason = "pump"
 
-        } else if let glucose = loopManager?.glucoseStore?.latestGlucose,
+        } else if let glucose = self.loopManager?.glucoseStore?.latestGlucose,
             glucose.startDate.timeIntervalSinceNow <= TimeInterval(minutes: -30) {
             restartReason = "cgm"
         }
@@ -1033,23 +1033,24 @@ final class DeviceDataManager {
         guard let reason = restartReason else {
             return
         }
-        if btMagicDate.timeIntervalSinceNow > TimeInterval(minutes: -30) {
-            NSLog("maybeToggleBluetooth - \(source) - tried recently \(btMagicDate)")
+        if self.btMagicDate.timeIntervalSinceNow > TimeInterval(minutes: -30) {
+            NSLog("maybeToggleBluetooth - \(source) - tried recently \(self.btMagicDate)")
             return
         }
+        self.btMagicDate = Date()
 
         self.logger.addError("\(source) - Reason \(reason) - Restarting Bluetooth, no data for 30 minutes (could also be out of range)", fromSource: "maybeToggleBluetooth")
 
         if reason == "pump" {
             self.logger.addError("pump reconnect", fromSource: "maybeToggleBluetooth")
-            rileyLinkManager.getDevices { (devices) in
+            self.rileyLinkManager.getDevices { (devices) in
                 for device in devices {
                     if self.connectedPeripheralIDs.contains(device.peripheralIdentifier.uuidString) {
-                        self.queue.async {
-                            self.logger.addError("pump reconnect async \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
-                            self.rileyLinkManager.disconnect(device)
-                            self.rileyLinkManager.connect(device)
-                        }
+                        self.logger.addError("pump reconnect async \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
+                        self.rileyLinkManager.disconnect(device)
+                        self.rileyLinkManager.connect(device)
+                        AnalyticsManager.shared.didChangeRileyLinkConnectionState()
+                        self.logger.addError("pump reconnect done \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
                     } else {
                         self.logger.addError("pump not connected \(device.peripheralIdentifier.uuidString)", fromSource: "maybeToggleBluetooth")
                     }
@@ -1059,7 +1060,7 @@ final class DeviceDataManager {
         }
         else if reason == "cgm" {
             self.logger.addError("cgm re-setup", fromSource: "maybeToggleBluetooth")
-            setupCGM()
+            self.setupCGM()
             /*
             if let bluetoothManagerHandler = BluetoothManagerHandler.sharedInstance() {
                 self.logger.addError("disable", fromSource: "maybeToggleBluetooth")
@@ -1079,7 +1080,7 @@ final class DeviceDataManager {
             self.logger.addError("BluetoothManagerHandler no valid reason: \(reason)", fromSource: "maybeToggleBluetooth")
 
         }
-        btMagicDate = Date()
+      }
     }
     
     // MARK - CGM State
@@ -1324,6 +1325,7 @@ extension DeviceDataManager: CustomDebugStringConvertible {
             "cgm: \(String(describing: cgm))",
             "connectedPeripheralIDs: \(String(reflecting: connectedPeripheralIDs))",
             "deviceStates: \(String(reflecting: deviceStates))",
+            "btMagicDate: \(String(reflecting: btMagicDate))",
             "lastError: \(String(describing: lastError))",
             "lastTimerTick: \(String(describing: lastTimerTick))",
             "latestPumpStatus: \(String(describing: latestPumpStatus))",
