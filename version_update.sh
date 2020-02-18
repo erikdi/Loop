@@ -8,25 +8,35 @@ set +e
 OLDVERSION="$1"
 NEWVERSION="$2"
 
-case "$1" in
-    "")
-        echo old version is empty
-        exit 1;;
-    [0-9].[0-9].[0-9].20[1-2][0-9][0-1][0-9][0-3][0-9])
-        echo old version is ok;;
-    *)
-        echo "old version is ok, but non-standard"
-esac
+if [ "$NEWVERSION" == "" ]; then
+   NEWVERSION="$OLDVERSION"
+   OLDVERSION=$(egrep -o '1\.9\.4\.\d+' Loop/Info.plist)
+   echo "Automatically set old version $OLDVERSION"
+   if [ "$NEWVERSION" == "" ]; then
+	NEWVERSION=1.9.4.$(date +%Y%m%d)
+	echo "Automatically set new version $NEWVERSION"
+   fi
+fi
 
-case "$2" in
+case "$NEWVERSION" in
     "")
-        echo new version is empty
-        exit 2;;
+	echo "new version cannot be empty"
+	exit 2;;
     [0-9].[0-9].[0-9].20[1-2][0-9][0-1][0-9][0-3][0-9])
         echo new version is ok;;
     *)
         echo "new version is not ok"
         exit 2;;
+esac
+
+case "$OLDVERSION" in
+    "")
+	echo "old version cannot be empty"
+	exit 3;;
+    [0-9].[0-9].[0-9].20[1-2][0-9][0-1][0-9][0-3][0-9])
+        echo old version is ok;;
+    *)
+        echo "old version is ok, but non-standard"
 esac
 
 for f in "Loop/Info.plist" "LoopUI/Info.plist" "WatchApp Extension/Info.plist" "WatchApp/Info.plist" "DoseMathTests/Info.plist" "LoopTests/Info.plist" "Loop Status Extension/Info.plist" ; do
