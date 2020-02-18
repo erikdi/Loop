@@ -108,6 +108,7 @@ final class SettingsTableViewController: UITableViewController, DailyValueSchedu
         case insulinModel
         case minBasalRate
         case basalRate
+        case basalRateSetPump
         case carbRatio
         case insulinSensitivity
         case maxBasal
@@ -131,6 +132,9 @@ final class SettingsTableViewController: UITableViewController, DailyValueSchedu
 
         return formatter
     }()
+
+    fileprivate var setBasalRateLabel : UILabel?
+    fileprivate let basalRateSem = DispatchSemaphore(value: 1)
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         switch segue.destination {
@@ -293,6 +297,11 @@ final class SettingsTableViewController: UITableViewController, DailyValueSchedu
                 } else {
                     configCell.detailTextLabel?.text = TapToSetString
                 }
+            case .basalRateSetPump:
+                configCell.textLabel?.text = NSLocalizedString("Write Basal Rates", comment: "The title text for writing the basal rate schedule to the pump")
+
+                configCell.detailTextLabel?.text = "Tap to write"
+                setBasalRateLabel = configCell.detailTextLabel
             case .minBasalRate:
                 configCell.textLabel?.text = NSLocalizedString("Minimum Basal Rates", comment: "The title text for the minimum basal rate schedule")
                 
@@ -546,6 +555,27 @@ final class SettingsTableViewController: UITableViewController, DailyValueSchedu
                 scheduleVC.title = NSLocalizedString("Basal Rates", comment: "The title of the basal rate profile screen")
 
                 show(scheduleVC, sender: sender)
+            case .basalRateSetPump:
+                NSLog("Calling setBasalRates")
+                if basalRateSem.wait(timeout: .now()) == .success {
+                  setBasalRateLabel?.text = "Writing"
+                  dataManager.setBasalRate { (error) in
+                    DispatchQueue.main.async {
+                      if let error = error {
+                        NSLog("settings setBasalRates error \(error)")
+                        self.presentAlertController(with: error)
+                        self.setBasalRateLabel?.text = "Error \(error)"
+                        self.basalRateSem.signal()
+                      } else {
+                        NSLog("settings setBasalRates success")
+                        self.setBasalRateLabel?.text = "Success"
+                        self.basalRateSem.signal()
+                      }
+                    }
+                  }
+                } else {
+                    NSLog(" setBasalRates already in progress")
+                }
             case .minBasalRate:
                 let scheduleVC = SingleValueScheduleTableViewController()
                 

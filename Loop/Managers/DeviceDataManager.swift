@@ -298,7 +298,46 @@ final class DeviceDataManager {
         }
         return true
     }
-    
+
+    public func setBasalRate(_ completion: @escaping (_ error: Error?) -> Void) {
+        guard let schedule =  loopManager.basalRateSchedule else {
+            NSLog("setBasalRates - no basal rate schedule")
+            completion(LoopError.configurationError("No basal rate schedule"))
+            return
+        }
+        var entries : [BasalScheduleEntry] = [];
+        var i = 0
+        for item in schedule.items  {
+            let rate = item.value
+            let offset = item.startTime
+            let e = BasalScheduleEntry(index: i, timeOffset: offset, rate: rate)
+            entries.append(e)
+            i += 1
+        }
+        let newSchedule = BasalSchedule(entries: entries)
+        NSLog("setBasalRates - \(String(describing: newSchedule)).")
+        guard let ops = pumpOps else {
+            NSLog("setBasalRates - no pump ops")
+            completion(LoopError.configurationError("No pump ops"))
+            return
+        }
+        ops.runSession(withName: "setBasalRates", using: rileyLinkManager.firstConnectedDevice) { (session) in
+            StatisticsManager.shared.inc("setBasalRates")
+            guard let session = session else {
+                self.loopManager.addInternalNote("setBasalRates connection error.")
+                completion(LoopError.connectionError)
+                return
+            }
+            do {
+                try session.setBasalSchedule(newSchedule, for: .standard)
+                completion(nil)
+            } catch let error {
+                self.loopManager.addInternalNote("setBasalRates error \(String(describing: error)).")
+                completion(error)
+            }
+        }
+    }
+
     /**
      Handles receiving a MySentry status message, which are only posted by MM x23 pumps.
 
@@ -1341,4 +1380,3 @@ extension DeviceDataManager: CustomDebugStringConvertible {
         ].joined(separator: "\n")
     }
 }
-
