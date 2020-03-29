@@ -244,12 +244,15 @@ final class DeviceDataManager {
                         )
                     }
                 } catch let error {
-                    self.logger.addError("Device \(device.name ?? "") auto-tune failed with error: \(error)", fromSource: "RileyLink")
+                    self.logger.addError("troubleshootPumpComms - deprioritize device \(device.name ?? "") auto-tune failed with error: \(error)", fromSource: "RileyLink")
+                    StatisticsManager.shared.inc("Deprioritize")
                     self.rileyLinkManager.deprioritize(device)
                     self.setLastError(error: error)
                 }
             }
         } else {
+            self.logger.addError("troubleshootPumpComms - deprioritize device \(device.name ?? "")", fromSource: "RileyLink")
+            StatisticsManager.shared.inc("Deprioritize")
             rileyLinkManager.deprioritize(device)
         }
     }
@@ -734,7 +737,7 @@ final class DeviceDataManager {
             return
         }
         bolusInProgress = true
-        
+
         // If we don't have recent pump data, or the pump was recently rewound, read new pump data before bolusing.
         var shouldReadReservoir = isReservoirDataOlderThan(timeIntervalSinceNow: .minutes(-10))
         var reservoirError : Error? = nil
@@ -750,12 +753,14 @@ final class DeviceDataManager {
             shouldReadReservoir = true
         }
 
-        ops.runSession(withName: "Bolus", using: rileyLinkManager.firstConnectedDevice) { (session) in
+
+        rileyLinkManager.getDevices { (devices) in
+          guard let device = devices.firstConnected else {
+              notify(LoopError.connectionError)
+              return
+          }
+          ops.runSession(withName: "Bolus", using: device) { (session) in
             StatisticsManager.shared.inc("Bolus")
-            guard let session = session else {
-                notify(LoopError.connectionError)
-                return
-            }
 
             if shouldReadReservoir {
                 if let e = reservoirError {
@@ -806,7 +811,6 @@ final class DeviceDataManager {
                     return
                 }
             }
-
             let semaphore = DispatchSemaphore(value: 0)
             self.loopManager.addRequestedBolus(units: units, at: Date()) {
                 semaphore.signal()
@@ -831,6 +835,7 @@ final class DeviceDataManager {
                     
                     switch(error) {
                     case SetBolusError.certain(_):
+                        // this should check it is the same bolus...
                         if str.contains("bolusInProgress") ||  str.contains("Bolus in progress") {
                             self.loopManager.addConfirmedBolus(units: units, at: Date()) {
                                 self.loopManager.addInternalNote("retryBolus - already in progress, confirming.")
@@ -855,7 +860,11 @@ final class DeviceDataManager {
                     } else {
 
                         self.loopManager.addFailedBolus(units: units, at: Date(), error: error, certain: retry, attempts: attempt) {
-                            if !retry {
+                            if retry {
+                                // If we exhausted attempts, try another connection if multiple devices are configured.
+                                // Ideally this whole logic is wrapped in a retrier going through all devices.
+                                self.troubleshootPumpComms(using: device)
+                            } else {
                                 // In case of an uncertain error, we need to read the pump data to make sure
                                 // we are not double bolusing.
                                 self.triggerPumpDataRead()
@@ -867,11 +876,8 @@ final class DeviceDataManager {
                     }
                 }
             }
-
-       /* } else {
-            setBolus()
-*/
-        }
+          } // newSession
+        } // getDevice
     }
 
     // MARK: - CGM
