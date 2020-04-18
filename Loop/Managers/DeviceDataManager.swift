@@ -89,6 +89,8 @@ final class DeviceDataManager {
 
     private(set) var loopManager: LoopDataManager!
 
+    var foodManager: FoodManager!
+
     init() {
         pluginManager = PluginManager()
         
@@ -112,6 +114,8 @@ final class DeviceDataManager {
         remoteDataManager.delegate = self
         statusExtensionManager = StatusExtensionDataManager(deviceDataManager: self)
 
+        foodManager = FoodManager()
+
         loopManager = LoopDataManager(
             lastLoopCompleted: statusExtensionManager.context?.lastLoopCompleted,
             basalDeliveryState: pumpManager?.status.basalDeliveryState,
@@ -120,6 +124,9 @@ final class DeviceDataManager {
         watchManager = WatchDataManager(deviceManager: self)
         nightscoutDataManager = NightscoutDataManager(deviceDataManager: self)
 
+        AnalyticsManager.shared.nightscoutDataManager = nightscoutDataManager
+        DiagnosticLogger.shared.nightscoutDataManager = nightscoutDataManager
+
         if debugEnabled {
             testingScenariosManager = LocalTestingScenariosManager(deviceManager: self)
         }
@@ -127,6 +134,7 @@ final class DeviceDataManager {
         loopManager.delegate = self
         loopManager.carbStore.syncDelegate = remoteDataManager.nightscoutService.uploader
         loopManager.doseStore.delegate = self
+        loopManager.nightscoutDataManager = nightscoutDataManager
 
         setupPump()
         setupCGM()
@@ -170,7 +178,7 @@ final class DeviceDataManager {
         switch result {
         case .newData(let values):
             log.default("CGMManager:\(type(of: manager)) did update with \(values.count) values")
-                        
+
             loopManager.addGlucose(values) { result in
                 if manager.shouldSyncToRemoteService {
                     switch result {
@@ -183,6 +191,7 @@ final class DeviceDataManager {
                 
                 self.log.default("Asserting current pump data")
                 self.pumpManager?.assertCurrentPumpData()
+                self.loopManager.loop(trigger: "processCGMResult")
             }
         case .noData:
             log.default("CGMManager:\(type(of: manager)) did update with no data")
@@ -195,7 +204,15 @@ final class DeviceDataManager {
             log.default("Asserting current pump data")
             pumpManager?.assertCurrentPumpData()
         }
-        
+        if let state = manager.sensorState {
+            if let sessionStart = state.sensorStartDate {
+                if UserDefaults.appGroup?.sensorSessionStartDate != sessionStart {
+                    log.default("CGMSensor Session Start Change detected (new \(sessionStart), old \(String(describing: UserDefaults.appGroup?.sensorSessionStartDate)), uploading.")
+                    self.nightscoutDataManager.uploadSensorSessionStart(sessionStart, fromDevice: manager.device)
+                    UserDefaults.appGroup?.sensorSessionStartDate = sessionStart
+                }
+            }
+        }
         updatePumpManagerBLEHeartbeatPreference()
     }
 
@@ -212,6 +229,7 @@ final class DeviceDataManager {
                 
                 let report = [
                     Bundle.main.localizedNameAndVersion,
+                    "* gitVersion: \(GitVersionInformation().description)",
                     "* gitRevision: \(Bundle.main.gitRevision ?? "N/A")",
                     "* gitBranch: \(Bundle.main.gitBranch ?? "N/A")",
                     "* sourceRoot: \(Bundle.main.sourceRoot ?? "N/A")",
@@ -286,11 +304,14 @@ extension DeviceDataManager {
             completion(LoopError.configurationError(.pumpManager))
             return
         }
-
         self.loopManager.addRequestedBolus(DoseEntry(type: .bolus, startDate: Date(), value: units, unit: .units), completion: nil)
         pumpManager.enactBolus(units: units, at: startDate, willRequest: { (dose) in
             // No longer used...
         }) { (result) in
+            // This is a race condition as pumpManager.status.device can have changed,
+            // the alternative would be to pipe it though the DoseEntry callback, which
+            // is cumbersome.
+            self.nightscoutDataManager.uploadLog(date: Date(), level: "info", note: "Bolus by \(pumpManager.status.device.debugDescription)")
             switch result {
             case .failure(let error):
                 self.log.error(error)
@@ -394,10 +415,31 @@ extension DeviceDataManager: PumpManagerDelegate {
         UserDefaults.appGroup?.pumpManagerRawValue = pumpManager.rawValue
     }
 
+    func scheduleCgmFetchDataIfNeeded() {
+        queue.async {
+            self.cgmFetchDataIfNeeded()
+        }
+    }
+
+    private func cgmFetchDataIfNeeded() {
+        dispatchPrecondition(condition: .onQueue(queue))
+        cgmManager?.fetchNewDataIfNeeded { (result) in
+            if case .newData = result {
+                AnalyticsManager.shared.didFetchNewCGMData()
+            }
+
+            if let manager = self.cgmManager {
+                self.queue.async {
+                    self.processCGMResult(manager, result: result)
+                }
+            }
+        }
+    }
+    
     func pumpManagerBLEHeartbeatDidFire(_ pumpManager: PumpManager) {
         dispatchPrecondition(condition: .onQueue(queue))
         log.default("PumpManager:\(type(of: pumpManager)) did fire BLE heartbeat")
-
+        cgmFetchDataIfNeeded()
         let bleHeartbeatUpdateInterval: TimeInterval
         switch loopManager.lastLoopCompleted?.timeIntervalSinceNow {
         case .none:
@@ -420,18 +462,7 @@ extension DeviceDataManager: PumpManagerDelegate {
             return
         }
         lastBLEDrivenUpdate = Date()
-
-        cgmManager?.fetchNewDataIfNeeded { (result) in
-            if case .newData = result {
-                AnalyticsManager.shared.didFetchNewCGMData()
-            }
-
-            if let manager = self.cgmManager {
-                self.queue.async {
-                    self.processCGMResult(manager, result: result)
-                }
-            }
-        }
+        loopManager.loop(trigger: "BLEHeartbeat")
     }
 
     func pumpManagerMustProvideBLEHeartbeat(_ pumpManager: PumpManager) -> Bool {
@@ -444,7 +475,7 @@ extension DeviceDataManager: PumpManagerDelegate {
         /// characteristic which can cause the app to wake. For most users, the G5 Transmitter and
         /// G4 Receiver are reliable as hearbeats, but users who find their resources extremely constrained
         /// due to greedy apps or older devices may choose to always enable the timer by always setting `true`
-        return !(cgmManager?.providesBLEHeartbeat == true)
+        return true  // !(cgmManager?.providesBLEHeartbeat == true)
     }
 
     func pumpManager(_ pumpManager: PumpManager, didUpdate status: PumpManagerStatus, oldStatus: PumpManagerStatus) {
@@ -462,6 +493,7 @@ extension DeviceDataManager: PumpManagerDelegate {
 
             if let oldBatteryValue = oldStatus.pumpBatteryChargeRemaining, newBatteryValue - oldBatteryValue >= loopManager.settings.batteryReplacementDetectionThreshold {
                 AnalyticsManager.shared.pumpBatteryWasReplaced()
+                self.nightscoutDataManager.uploadBatteryReplacement(Date(), oldBatteryValue, newBatteryValue, fromDevice: status.device)
             }
         }
 
@@ -557,7 +589,7 @@ extension DeviceDataManager: PumpManagerDelegate {
     func pumpManagerRecommendsLoop(_ pumpManager: PumpManager) {
         dispatchPrecondition(condition: .onQueue(queue))
         log.default("PumpManager:\(type(of: pumpManager)) recommends loop")
-        loopManager.loop()
+        loopManager.loop(trigger: "pumpManagerRecommends")
     }
 
     func startDateToFilterNewPumpEvents(for manager: PumpManager) -> Date {

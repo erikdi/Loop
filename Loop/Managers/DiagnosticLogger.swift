@@ -21,11 +21,12 @@ final class DiagnosticLogger {
     }
 
     let remoteLogLevel: OSLogType
+    var nightscoutDataManager: NightscoutDataManager?
 
     static let shared: DiagnosticLogger = DiagnosticLogger()
 
     init() {
-        remoteLogLevel = isSimulator ? .fault : .info
+        remoteLogLevel = .info  // isSimulator ? .fault : .info
 
         // Delete the mLab credentials as they're no longer supported
         try! KeychainManager().setMLabDatabaseName(nil, APIKey: nil)
@@ -77,6 +78,49 @@ final class CategoryLogger {
         }
 
         logger.logglyService.client?.send(message, tags: [type.tagName, category])
+        nightscoutLog(type, message: message)
+    }
+
+    private var lastMessage : String = ""
+    private var duplicateMessageCount = 0
+
+    private func nightscoutLog(_ type: OSLogType, message: String) {
+        if category == "NightscoutUploader" {
+            NSLog("NightscoutUploader \(type.tagName) \(message)")
+            return
+        }
+        if category == "NightscoutService" {
+            NSLog("NightscoutService \(type.tagName) \(message)")
+            return
+        }
+        if category == "GlucoseStore" && message.range(of: "Protected health data is inaccessible") != nil {
+            return
+        }
+        if category == "RileyLink" {
+            NSLog("RileyLink \(type.tagName) \(message)")
+            return
+        }
+        if message.range(of: "NSURLErrorDomain") != nil {
+            return
+        }
+        if message.range(of: "updatePredicted getLoopState") != nil {
+            NSLog("\(type.tagName) \(message)")
+            return
+        }
+        if type == .debug {
+            return
+        }
+        if (message == lastMessage) {
+            duplicateMessageCount += 1
+            return
+        } else {
+            if (duplicateMessageCount > 0) {
+                logger.nightscoutDataManager?.uploadLog(date: Date(), level: type.tagName, note: "[x\(duplicateMessageCount)] \(message)")
+            }
+            duplicateMessageCount = 0
+        }
+        lastMessage = message
+        logger.nightscoutDataManager?.uploadLog(date: Date(), level: type.tagName, note: message)
     }
 
     private func remoteLog(_ type: OSLogType, message: [String: Any]) {

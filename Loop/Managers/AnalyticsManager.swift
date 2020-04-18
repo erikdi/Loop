@@ -20,6 +20,8 @@ final class AnalyticsManager: IdentifiableClass {
         }
     }
 
+    var nightscoutDataManager: NightscoutDataManager?
+
     init() {
         if let APIKey = KeychainManager().getAmplitudeAPIKey() {
             amplitudeService = AmplitudeService(APIKey: APIKey)
@@ -37,14 +39,40 @@ final class AnalyticsManager: IdentifiableClass {
     private var logger: CategoryLogger?
 
     private func logEvent(_ name: String, withProperties properties: [AnyHashable: Any]? = nil, outOfSession: Bool = false) {
-        logger?.debug("\(name) \(properties ?? [:])")
         amplitudeService.client?.logEvent(name, withEventProperties: properties, outOfSession: outOfSession)
+
+        // let propertyDescription = (properties == nil) ? "" : " \(String(describing: properties))"
+        var desc : [String] = []
+        for (k, v) in properties ?? [:] {
+            var key: String = String(describing: k)
+            var val: String = String(describing: v)
+            switch k {
+            case let str as String:
+                key = str
+            default:
+                break
+            }
+            switch v {
+            case let str as String:
+                val = str
+            case let i as Int:
+                val = "\(i)"
+            default:
+                break
+            }
+            desc.append("\(key): \(val) ")
+        }
+        desc.sort()
+        let descStr = desc.joined(separator: ", ")
+        logger?.default("\(name) \(descStr)")
+        nightscoutDataManager?.uploadLog(date: Date(), level: "Analytics", note: "\(name) \(descStr)")
     }
 
     // MARK: - UIApplicationDelegate
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable: Any]?) {
-        logEvent("App Launch")
+        let version = GitVersionInformation().description
+        logEvent("App Launch", withProperties: ["version": version])
     }
 
     // MARK: - Screens
@@ -150,11 +178,22 @@ final class AnalyticsManager: IdentifiableClass {
         logEvent("CGM Fetch", outOfSession: true)
     }
 
-    func loopDidSucceed(_ duration: TimeInterval) {
-        logEvent("Loop success", withProperties: ["duration": duration], outOfSession: true)
+    func loopDidSucceed(_ duration: TimeInterval, trigger: String, retries: Int, uuid: String) {
+        logEvent("Loop success", withProperties: ["duration": duration, "trigger": trigger, "retries": retries, "uuid": uuid], outOfSession: true)
     }
 
-    func loopDidError() {
-        logEvent("Loop error", outOfSession: true)
+    func loopDidError(_ error: Error, trigger: String, retries: Int, uuid: String) {
+        logEvent("Loop error", withProperties: ["error": error.localizedDescription, "trigger": trigger, "retries": retries, "uuid": uuid], outOfSession: true)
+    }
+}
+
+// PRIVATE MODIFICATIONS
+extension AnalyticsManager {
+    func didDisplayFoodPicker() {
+        logEvent("FoodPicker Screen")
+    }
+
+    func didAddCarbsFromFoodPicker(_ pick: FoodPick) {
+        logEvent("AddCarbsFromFoodPicker \(pick.item.title): \(pick.displayCarbs)g ")
     }
 }

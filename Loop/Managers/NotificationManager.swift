@@ -117,7 +117,7 @@ struct NotificationManager {
         // Give a little extra time for a loop-in-progress to complete
         let gracePeriod = TimeInterval(minutes: 0.5)
 
-        for minutes: Double in [20, 40, 60, 120] {
+        for minutes: Double in [30, 60, 120] {
             let notification = UNMutableNotificationContent()
             let failureInterval = TimeInterval(minutes: minutes)
 
@@ -234,5 +234,37 @@ struct NotificationManager {
 
     static func clearPumpReservoirNotification() {
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [LoopNotificationCategory.pumpReservoirLow.rawValue])
+    }
+}
+
+extension NotificationManager {
+
+    static func clearGlucoseFutureLowNotifications() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [LoopNotificationCategory.glucoseLow.rawValue])
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [LoopNotificationCategory.glucoseLow.rawValue])
+    }
+
+    static func sendGlucoseFutureLowNotifications(at: Date, carbs: Double) {
+        let notification = UNMutableNotificationContent()
+        notification.title = NSLocalizedString("Future Glucose Low", comment: "The notification title for a low glucose alarm.")
+        notification.body = String(format: NSLocalizedString("Eat %@ g carbs and record them in Loop to prevent future low.",
+                                                             comment: "The notification alert describing a possible low glucose event. The substitution parameter is the time remaining."),
+                                   NumberFormatter.localizedString(from: NSNumber(value: carbs), number: .decimal)
+        )
+        notification.categoryIdentifier = LoopNotificationCategory.glucoseLow.rawValue
+        if #available(iOS 12.0, *) {
+            notification.sound = UNNotificationSound.defaultCriticalSound(withAudioVolume: 1)
+        } else {
+            notification.sound = .default
+        }
+
+        let request = UNNotificationRequest(
+            // Only support 1 low notification at once
+            identifier: LoopNotificationCategory.glucoseLow.rawValue,
+            content: notification,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request)
     }
 }

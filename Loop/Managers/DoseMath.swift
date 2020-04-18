@@ -15,7 +15,7 @@ private enum InsulinCorrection {
     case inRange
     case aboveRange(min: GlucoseValue, correcting: GlucoseValue, minTarget: HKQuantity, units: Double)
     case entirelyBelowRange(correcting: GlucoseValue, minTarget: HKQuantity, units: Double)
-    case suspend(min: GlucoseValue)
+    case suspend(min: GlucoseValue, units: Double)
 }
 
 
@@ -27,7 +27,9 @@ extension InsulinCorrection {
             return units
         case .entirelyBelowRange(correcting: _, minTarget: _, units: let units):
             return units
-        case .inRange, .suspend:
+        case .suspend(min: _, units: let units):
+            return units
+        case .inRange:
             return 0
         }
     }
@@ -78,7 +80,7 @@ extension InsulinCorrection {
     
     private var bolusRecommendationNotice: BolusRecommendationNotice? {
         switch self {
-        case .suspend(min: let minimum):
+        case .suspend(min: let minimum, units: _):
             return .glucoseBelowSuspendThreshold(minGlucose: minimum)
         case .inRange, .entirelyBelowRange:
             return nil
@@ -101,16 +103,20 @@ extension InsulinCorrection {
     fileprivate func asManualBolus(
         pendingInsulin: Double,
         maxBolus: Double,
+        carbRatio: Double,
         volumeRounder: ((Double) -> Double)?
     ) -> ManualBolusRecommendation {
         var units = self.units - pendingInsulin
         units = Swift.min(maxBolus, Swift.max(0, units))
         units = volumeRounder?(units) ?? units
 
+        let carbs = round(abs(Swift.min(0, self.units)) * carbRatio / 10) * 10
+
         return ManualBolusRecommendation(
             amount: units,
             pendingInsulin: pendingInsulin,
-            notice: bolusRecommendationNotice
+            notice: bolusRecommendationNotice,
+            carbs: carbs
         )
     }
 }
@@ -244,7 +250,7 @@ extension Collection where Element: GlucoseValue {
         var eventualGlucose: GlucoseValue?
         var correctingGlucose: GlucoseValue?
         var minCorrectionUnits: Double?
-
+        var suspend = false
         // Only consider predictions within the model's effect duration
         let validDateRange = DateInterval(start: date, duration: model.effectDuration)
 
@@ -259,8 +265,8 @@ extension Collection where Element: GlucoseValue {
             }
 
             // If any predicted value is below the suspend threshold, return immediately
-            guard prediction.quantity >= suspendThreshold else {
-                return .suspend(min: prediction)
+            if prediction.quantity < suspendThreshold {
+                suspend = true
             }
 
             // Update range statistics
@@ -325,7 +331,9 @@ extension Collection where Element: GlucoseValue {
             ) else {
                 return nil
             }
-
+            if suspend {
+                return .suspend(min: min, units: units)
+            }
             return .entirelyBelowRange(
                 correcting: min,
                 minTarget: minGlucoseTargets.lowerBound,
@@ -479,11 +487,15 @@ extension Collection where Element: GlucoseValue {
             scheduledBasalRateMatchesPump: !isBasalRateScheduleOverrideActive
         )
         
-        let bolusUnits = correction.asBolus(
+        let bolusUnitsUnrounded = correction.asBolus(
             partialApplicationFactor: partialApplicationFactor,
             maxBolusUnits: maxAutomaticBolus,
             volumeRounder: volumeRounder
         )
+        // Round to 0.1 - it is okay to round up as we can correct with temp basal.
+        // TODO add a more aggressive mode that if carbs are entered it can "pre-bolus"
+        //      the hourly basal rate.
+        let bolusUnits = round(bolusUnitsUnrounded * 10)/10
 
         if temp != nil || bolusUnits > 0 {
             return AutomaticDoseRecommendation(basalAdjustment: temp, bolusUnits: bolusUnits)
@@ -510,6 +522,7 @@ extension Collection where Element: GlucoseValue {
         at date: Date = Date(),
         suspendThreshold: HKQuantity?,
         sensitivity: InsulinSensitivitySchedule,
+        carbRatio: CarbRatioSchedule,
         model: InsulinModel,
         pendingInsulin: Double,
         maxBolus: Double,
@@ -524,10 +537,11 @@ extension Collection where Element: GlucoseValue {
         ) else {
             return ManualBolusRecommendation(amount: 0, pendingInsulin: pendingInsulin)
         }
-
+        let carbRatio = carbRatio.quantity(at: date).doubleValue(for: HKUnit.gram())
         var bolus = correction.asManualBolus(
             pendingInsulin: pendingInsulin,
             maxBolus: maxBolus,
+            carbRatio: carbRatio,
             volumeRounder: volumeRounder
         )
 

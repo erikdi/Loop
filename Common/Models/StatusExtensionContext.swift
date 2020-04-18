@@ -25,6 +25,7 @@ struct SensorDisplayableContext: SensorDisplayable {
     let stateDescription: String
     let trendType: GlucoseTrend?
     let isLocal: Bool
+    let sensorStartDate: Date?
 }
 
 struct GlucoseContext: GlucoseValue {
@@ -88,10 +89,11 @@ extension SensorDisplayableContext: RawRepresentable {
         var raw: RawValue = [
             "isStateValid": isStateValid,
             "stateDescription": stateDescription,
-            "isLocal": isLocal
+            "isLocal": isLocal,
+
         ]
         raw["trendType"] = trendType?.rawValue
-
+        raw["sensorStartDate"] = sensorStartDate?.timeIntervalSinceReferenceDate
         return raw
     }
 
@@ -100,6 +102,7 @@ extension SensorDisplayableContext: RawRepresentable {
         stateDescription = other.stateDescription
         isLocal = other.isLocal
         trendType = other.trendType
+        sensorStartDate = other.sensorStartDate
     }
 
     init?(rawValue: RawValue) {
@@ -119,6 +122,11 @@ extension SensorDisplayableContext: RawRepresentable {
             trendType = GlucoseTrend(rawValue: rawValue)
         } else {
             trendType = nil
+        }
+        if let rawValue = rawValue["sensorStartDate"] as? Double, rawValue > 0 {
+            self.sensorStartDate = Date(timeIntervalSinceReferenceDate: rawValue)
+        } else {
+            self.sensorStartDate = nil
         }
     }
 }

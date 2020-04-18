@@ -146,7 +146,7 @@ final class NightscoutDataManager {
         let profileSet = ProfileSet(
             startDate: Date(),
             units: preferredUnit.shortLocalizedUnitString(),
-            enteredBy: "Loop",
+            enteredBy: "loop://\(UIDevice.current.name)",
             defaultProfile: "Default",
             store: store,
             settings: nsLoopSettings)
@@ -449,6 +449,88 @@ final class NightscoutDataManager {
         }
         uploader.flushAll();
     }
+
+    private func makeDeviceStr(_ device: HKDevice?) -> String {
+        if let device = device {
+            return [device.name, device.manufacturer, device.model, device.firmwareVersion, device.softwareVersion].compactMap { $0 }.joined(separator: " ")
+        } else {
+            return "loop://\(UIDevice.current.name)"
+        }
+    }
+
+    private func uploadTreatment(_ treatment: NightscoutTreatment) {
+        guard let uploader = deviceManager.remoteDataManager.nightscoutService.uploader else {
+            return
+        }
+        uploader.upload([treatment]) { (result) in
+                           switch result {
+                           case .failure(let error):
+                               self.log.error("Failed to upload treatment %{public}@: %{public}@", String(describing: treatment), String(describing: error))
+                           case .success:
+                               self.log.debug("Uploaded treatment %{public}@", String(describing: treatment))
+                           }
+        }
+        uploader.flushAll()
+    }
+
+    func uploadSensorSessionStart(_ sessionStart: Date, fromDevice device: HKDevice? = nil) {
+        uploadTreatment(NightscoutTreatment(
+            timestamp: sessionStart,
+            enteredBy: makeDeviceStr(device),
+            notes:  "Automatically added.",
+            eventType: "Sensor Start"))
+    }
+
+    func uploadBatteryReplacement(_ changeDate: Date, _ oldBatteryValue: Double, _ newBatteryValue: Double, fromDevice device: HKDevice? = nil) {
+        uploadTreatment(NightscoutTreatment(
+            timestamp: changeDate,
+            enteredBy: makeDeviceStr(device),
+            notes:  "Automatically added: \(oldBatteryValue) V -> \(newBatteryValue) V",
+            eventType: "Pump Battery Change"))
+    }
+
+    func uploadNote(date: Date, note: String, fromDevice device: HKDevice? = nil) {
+        uploadTreatment(NoteNightscoutTreatment(
+            timestamp: date,
+            enteredBy: makeDeviceStr(device),
+            notes: "\(note)"))
+    }
+
+    func uploadLog(date: Date, level: String, note: String, fromDevice device: HKDevice? = nil) {
+        // This hack is here to prevent de-duplication of events on insert
+        // in Nightscout.  Everything else is logged much less per second, this might
+        // be logged more than once.
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
+        let microSeconds = (comps.nanosecond ?? 0) / 1000
+        let upperLevel = level.firstUppercased
+        let eventType = String(format: "Log.\(upperLevel).%06d", microSeconds)
+        uploadTreatment(NightscoutTreatment(
+            timestamp: date,
+            enteredBy: makeDeviceStr(device),
+            notes: "\(note)",
+            eventType: eventType))
+    }
+
+    func uploadMeterGlucose(date: Date, glucose: HKQuantity, comment: String, fromDevice device: HKDevice? = nil) {
+        let amount = glucose.doubleValue(for: .milligramsPerDeciliter)
+        uploadTreatment(BGCheckNightscoutTreatment(
+            timestamp: date,
+            enteredBy: makeDeviceStr(device),
+            glucose: Int(amount),
+            glucoseType: .Meter,
+            units: .MGDL,
+            notes: comment
+        ))
+    }
+
+    func uploadAnnouncement(date: Date, note: String, fromDevice device: HKDevice? = nil) {
+        uploadTreatment(NightscoutTreatment(
+            timestamp: date,
+            enteredBy: makeDeviceStr(device),
+            notes: "\(note)",
+            eventType: "Announcement"))
+    }
 }
 
 private extension Array where Element == RepeatingScheduleValue<Double> {
@@ -565,10 +647,10 @@ private extension OverrideTreatment {
         let enteredBy: String
         if case .remote(let address) = override.enactTrigger {
             remoteAddress = address
-            enteredBy = "Loop (via remote command)"
+            enteredBy = "loop://\(UIDevice.current.name) (via remote command)"
         } else {
             remoteAddress = nil
-            enteredBy = "Loop"
+            enteredBy = "loop://\(UIDevice.current.name)"
         }
         
         let duration: OverrideTreatment.Duration

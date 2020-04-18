@@ -1,3 +1,11 @@
+# IMPORTANT
+  
+This is the [ErikDi](https://github.com/erikdi/Loop) Loop fork.
+
+See [FEATURES](/FEATURES.md) for a list of new features and [TODO](/TODO.md) for planned stuff.
+
+Use at your own risk.
+
 # Loop for iOS
 
 ![App Icon](/Loop/Assets.xcassets/AppIcon.appiconset/Icon-Small-40%402x.png?raw=true)

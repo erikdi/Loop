@@ -30,7 +30,7 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
 
     var preferredUnit = HKUnit.gram()
 
-    var maxQuantity = HKQuantity(unit: .gram(), doubleValue: 250)
+    var maxQuantity = HKQuantity(unit: .gram(), doubleValue: 98)
 
     /// Entry configuration values. Must be set before presenting.
     var absorptionTimePickerInterval = TimeInterval(minutes: 30)
@@ -40,6 +40,19 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
     var maximumDateFutureInterval = TimeInterval(hours: 4)
 
     var glucoseUnit: HKUnit = .milligramsPerDeciliter
+    var minGlucose = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: 40)
+    var maxGlucose = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: 400)
+
+    var currentGlucose: GlucoseValue? = nil
+    var glucoseSample: NewGlucoseSample? {
+        if let q = glucoseQuantity {
+            return NewGlucoseSample(date: date, quantity: q, isDisplayOnly: false, syncIdentifier: UUID().uuidString)
+        } else {
+            return nil
+        }
+    }
+
+    var closeWithContinue: Bool = false
 
     var originalCarbEntry: StoredCarbEntry? {
         didSet {
@@ -54,6 +67,12 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
 
                 shouldBeginEditingQuantity = false
             }
+        }
+    }
+
+    fileprivate var glucoseQuantity: HKQuantity? {
+        didSet {
+            updateContinueButtonEnabled()
         }
     }
 
@@ -102,7 +121,7 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
             return NewCarbEntry(
                 quantity: quantity,
                 startDate: date,
-                foodType: foodType,
+                foodType: foodType ?? "🌮",
                 absorptionTime: absorptionTime,
                 externalID: originalCarbEntry?.externalID
             )
@@ -154,6 +173,8 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
         
         // Sets text for back button on bolus screen
         navigationItem.backBarButtonItem = UIBarButtonItem(title: NSLocalizedString("Carb Entry", comment: "Back button text for bolus screen to return to carb entry screen"), style: .plain, target: nil, action: nil)
+
+        closeWithContinue = false
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -185,11 +206,12 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
 
     fileprivate enum Row: Int {
         case value
-        case date
         case foodType
+        case glucose
         case absorptionTime
+        case date
 
-        static let count = 4
+        static let count = 3
     }
 
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -197,7 +219,11 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return Row.count
+        if currentGlucose != nil {
+            return Row.count - 1
+        } else {
+            return Row.count
+        }
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -270,12 +296,24 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
             cell.delegate = self
 
             return cell
+        case .glucose:
+            let cell = tableView.dequeueReusableCell(withIdentifier: DecimalTextFieldTableViewCell.className) as! DecimalTextFieldTableViewCell
+
+            if let glucose = currentGlucose {
+                cell.number = NSNumber(value: glucose.quantity.doubleValue(for: glucoseUnit))
+            }
+            cell.inputLabel?.text = "Glucose Value"
+            cell.textField.isEnabled = isSampleEditable
+            cell.unitLabel?.text = String(describing: glucoseUnit)
+            cell.delegate = self
+
+            return cell
         }
     }
 
     override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
         switch Row(rawValue: indexPath.row)! {
-        case .value, .date:
+        case .value, .date, .glucose:
             break
         case .foodType:
             if usesCustomFoodType, shouldBeginEditingFoodType, let cell = cell as? TextFieldTableViewCell {
@@ -335,10 +373,12 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
 
     @objc private func continueButtonPressed() {
         tableView.endEditing(true)
-        guard validateInput(), let updatedEntry = updatedCarbEntry else {
+        guard validateInput() else {
             return
         }
 
+        closeWithContinue = true
+        /*
         let bolusVC = BolusViewController.instance()
         bolusVC.deviceManager = deviceManager
         bolusVC.glucoseUnit = glucoseUnit
@@ -350,6 +390,8 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
         bolusVC.selectedDefaultAbsorptionTimeEmoji = selectedDefaultAbsorptionTimeEmoji
 
         show(bolusVC, sender: footerView.primaryButton)
+        */
+        performSegue(withIdentifier: "close", sender: nil)
     }
 
     private func validateInput() -> Bool {
@@ -361,20 +403,29 @@ final class CarbEntryViewController: ChartsTableViewController, IdentifiableClas
             return false
         }
 
-        guard let quantity = quantity, quantity.doubleValue(for: preferredUnit) > 0 else { return false }
-        guard quantity.compare(maxQuantity) != .orderedDescending else {
-            navigationDelegate.showMaxQuantityValidationWarning(for: self, maxQuantityGrams: maxQuantity.doubleValue(for: .gram()))
-            return false
+        if let quantity = quantity, quantity.doubleValue(for: preferredUnit) > 0 {
+            guard quantity.compare(maxQuantity) != .orderedDescending else {
+                navigationDelegate.showMaxQuantityValidationWarning(for: self, maxQuantityGrams: maxQuantity.doubleValue(for: .gram()))
+                return false
+            }
+        }
+
+        if let quantity = glucoseQuantity {
+            if quantity < minGlucose || quantity > maxGlucose {
+                return false
+            }
         }
 
         return true
     }
 
     private func updateContinueButtonEnabled() {
+        let validInput = validateInput()
         let hasValidQuantity = quantity != nil && quantity!.doubleValue(for: preferredUnit) > 0
-        let haveChangesBeenMade = updatedCarbEntry != nil
+        let hasValidGlucose = glucoseQuantity != nil && glucoseQuantity!.doubleValue(for: glucoseUnit) > 0
+        let haveChangesBeenMade = (updatedCarbEntry != nil) || (glucoseSample != nil)
         
-        let readyToContinue = hasValidQuantity && haveChangesBeenMade
+        let readyToContinue = (hasValidQuantity || hasValidGlucose) && haveChangesBeenMade
         
         footerView.primaryButton.isEnabled = readyToContinue
         navigationItem.rightBarButtonItem?.isEnabled = readyToContinue
@@ -402,6 +453,10 @@ extension CarbEntryViewController: TextFieldTableViewCellDelegate {
             }
         case .foodType?:
             foodType = cell.textField.text
+        case .glucose?:
+            if let cell = cell as? DecimalTextFieldTableViewCell, let number = cell.number {
+                glucoseQuantity = HKQuantity(unit: glucoseUnit, doubleValue: number.doubleValue)
+            }
         default:
             break
         }
@@ -416,6 +471,10 @@ extension CarbEntryViewController: TextFieldTableViewCellDelegate {
                 quantity = HKQuantity(unit: preferredUnit, doubleValue: number.doubleValue)
             } else {
                 quantity = nil
+            }
+        case .glucose?:
+            if let cell = cell as? DecimalTextFieldTableViewCell, let number = cell.number {
+                glucoseQuantity = HKQuantity(unit: glucoseUnit, doubleValue: number.doubleValue)
             }
         default:
             break
@@ -448,13 +507,17 @@ extension CarbEntryViewController: FoodTypeShortcutCellDelegate {
         switch cell.selectionState {
         case .fast:
             absorptionTime = defaultAbsorptionTimes?.fast
+            foodType = "🍭"
         case .medium:
             absorptionTime = defaultAbsorptionTimes?.medium
+            foodType = "🌮"
         case .slow:
             absorptionTime = defaultAbsorptionTimes?.slow
+            foodType = "🍕"
         case .custom:
             tableView.beginUpdates()
             usesCustomFoodType = true
+            absorptionTime = defaultAbsorptionTimes?.medium
             shouldBeginEditingFoodType = true
             tableView.reloadRows(at: [IndexPath(row: Row.foodType.rawValue, section: 0)], with: .fade)
             tableView.endUpdates()

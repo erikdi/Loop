@@ -21,7 +21,7 @@ private extension RefreshContext {
     static let all: Set<RefreshContext> = [.status, .glucose, .insulin, .carbs, .targets]
 }
 
-final class StatusTableViewController: ChartsTableViewController {
+final class StatusTableViewController: ChartsTableViewController, MealTableViewCellDelegate {
 
     private let log = OSLog(category: "StatusTableViewController")
 
@@ -91,6 +91,9 @@ final class StatusTableViewController: ChartsTableViewController {
         // Toolbar
         toolbarItems![0].accessibilityLabel = NSLocalizedString("Add Meal", comment: "The label of the carb entry button")
         toolbarItems![0].tintColor = UIColor.COBTintColor
+
+        toolbarItems![2] = createNoteButtonItem()
+
         toolbarItems![4].accessibilityLabel = NSLocalizedString("Bolus", comment: "The label of the bolus entry button")
         toolbarItems![4].tintColor = UIColor.doseTintColor
 
@@ -99,6 +102,12 @@ final class StatusTableViewController: ChartsTableViewController {
         }
         toolbarItems![8].accessibilityLabel = NSLocalizedString("Settings", comment: "The label of the settings button")
         toolbarItems![8].tintColor = UIColor.secondaryLabelColor
+
+        let longTapGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(toggleExpertMode(_:)))
+        longTapGestureRecognizer.minimumPressDuration = 0.3
+
+        self.navigationController?.toolbar.addGestureRecognizer(longTapGestureRecognizer)
+        toolbarItems![8].isEnabled = expertMode
 
         tableView.register(BolusProgressTableViewCell.nib(), forCellReuseIdentifier: BolusProgressTableViewCell.className)
 
@@ -229,6 +238,14 @@ final class StatusTableViewController: ChartsTableViewController {
         return !landscapeMode && statusRowMode.hasRow
     }
 
+    private var shouldShowNeedManualGlucose: Bool {
+        return !landscapeMode && (displayNeedManualGlucose != nil)
+    }
+
+    private var shouldShowMeal: Bool {
+        return !landscapeMode
+    }
+
     override func glucoseUnitDidChange() {
         refreshContext = RefreshContext.all
     }
@@ -301,6 +318,7 @@ final class StatusTableViewController: ChartsTableViewController {
 
         let reloadGroup = DispatchGroup()
         var newRecommendedTempBasal: (recommendation: AutomaticDoseRecommendation, date: Date)?
+        var newManualBolusRecommendation: (recommendation: ManualBolusRecommendation, date: Date)?
         var glucoseValues: [StoredGlucoseSample]?
         var predictedGlucoseValues: [GlucoseValue]?
         var iobValues: [InsulinValue]?
@@ -340,6 +358,8 @@ final class StatusTableViewController: ChartsTableViewController {
                 if let netBasal = netBasal {
                     self.hudView?.basalRateHUD.setNetBasalRate(netBasal.rate, percent: netBasal.percent, at: netBasal.start)
                 }
+
+
             }
 
             // Display a recommended basal change only if we haven't completed recently, or we're in open-loop mode
@@ -350,6 +370,8 @@ final class StatusTableViewController: ChartsTableViewController {
                 newRecommendedTempBasal = state.recommendedAutomaticDose
             }
 
+            newManualBolusRecommendation = state.recommendedBolus
+
             if currentContext.contains(.carbs) {
                 reloadGroup.enter()
                 manager.carbStore.getCarbsOnBoardValues(start: startDate, effectVelocities: manager.settings.dynamicCarbAbsorptionEnabled ? state.insulinCounteractionEffects : nil) { (values) in
@@ -359,6 +381,15 @@ final class StatusTableViewController: ChartsTableViewController {
                     }
                 }
             }
+
+            self.validGlucose = state.validGlucose
+            if let _ = self.validGlucose {
+                self.needManualGlucose = nil
+            } else {
+                self.needManualGlucose = Date()
+            }
+
+            self.updateMealInformation(reloadGroup, manager.carbStore)
 
             reloadGroup.leave()
         }
@@ -504,10 +535,10 @@ final class StatusTableViewController: ChartsTableViewController {
             }
 
             // Show/hide the table view rows
-            let statusRowMode = self.determineStatusRowMode(recommendedDose: newRecommendedTempBasal)
+            let statusRowMode = self.determineStatusRowMode(recommendedDose: newRecommendedTempBasal,
+                                                            manualBolus: newManualBolusRecommendation)
 
             self.updateHUDandStatusRows(statusRowMode: statusRowMode, newSize: currentContext.newSize, animated: animated)
-
             self.redrawCharts()
 
             self.tableView.endUpdates()
@@ -527,9 +558,11 @@ final class StatusTableViewController: ChartsTableViewController {
     private enum Section: Int {
         case hud = 0
         case status
+        case glucose // Glucose not available reminder
+        case meal   // Meal Information
         case charts
 
-        static let count = 3
+        static let count = 5
     }
 
     // MARK: - Chart Section Data
@@ -570,6 +603,8 @@ final class StatusTableViewController: ChartsTableViewController {
     private enum StatusRowMode {
         case hidden
         case recommendedDose(dose: AutomaticDoseRecommendation, at: Date, enacting: Bool)
+        case manualBolus(dose: ManualBolusRecommendation, at: Date)
+        case manualCarbs(dose: ManualBolusRecommendation, at: Date)
         case scheduleOverrideEnabled(TemporaryScheduleOverride)
         case enactingBolus
         case bolusing(dose: DoseEntry)
@@ -588,9 +623,11 @@ final class StatusTableViewController: ChartsTableViewController {
 
     private var statusRowMode = StatusRowMode.hidden
 
-    private func determineStatusRowMode(recommendedDose: (recommendation: AutomaticDoseRecommendation, date: Date)? = nil) -> StatusRowMode {
+    private func determineStatusRowMode(
+        recommendedDose: (recommendation: AutomaticDoseRecommendation, date: Date)? = nil,
+        manualBolus: (recommendation: ManualBolusRecommendation, date: Date)? = nil
+        ) -> StatusRowMode {
         let statusRowMode: StatusRowMode
-
         if case .initiating = bolusState {
             statusRowMode = .enactingBolus
         } else if case .canceling = bolusState {
@@ -601,8 +638,12 @@ final class StatusTableViewController: ChartsTableViewController {
             statusRowMode = .pumpSuspended(resuming: true)
         } else if case .inProgress(let dose) = bolusState, dose.endDate.timeIntervalSinceNow > 0 {
             statusRowMode = .bolusing(dose: dose)
-        } else if let (recommendation: dose, date: date) = recommendedDose {
+        } else if let (recommendation: dose, date: date) = recommendedDose, dose.bolusUnits > 0 || dose.basalAdjustment != nil {
             statusRowMode = .recommendedDose(dose: dose, at: date, enacting: false)
+        } else if let (recommendation: dose, date: date) = manualBolus, dose.amount > 0 {
+            statusRowMode = .manualBolus(dose: dose, at: date)
+        } else if let (recommendation: dose, date: date) = manualBolus, dose.carbs > 0 {
+            statusRowMode = .manualCarbs(dose: dose, at: date)
         } else if let scheduleOverride = deviceManager.loopManager.settings.scheduleOverride,
             scheduleOverride.context != .preMeal && scheduleOverride.context != .legacyWorkout,
             !scheduleOverride.hasFinished()
@@ -618,10 +659,17 @@ final class StatusTableViewController: ChartsTableViewController {
     private func updateHUDandStatusRows(statusRowMode: StatusRowMode, newSize: CGSize?, animated: Bool) {
         let hudWasVisible = self.shouldShowHUD
         let statusWasVisible = self.shouldShowStatus
+        let mealWasVisible = self.shouldShowMeal
+
+        let glucoseWasVisible = self.shouldShowNeedManualGlucose
 
         let oldStatusRowMode = self.statusRowMode
 
         self.statusRowMode = statusRowMode
+
+        let oldNeedManualGlucose = self.displayNeedManualGlucose
+        let newNeedManualGlucose = self.needManualGlucose
+        self.displayNeedManualGlucose = newNeedManualGlucose
 
         if let newSize = newSize {
             self.landscapeMode = newSize.width > newSize.height
@@ -629,6 +677,8 @@ final class StatusTableViewController: ChartsTableViewController {
 
         let hudIsVisible = self.shouldShowHUD
         let statusIsVisible = self.shouldShowStatus
+        let glucoseIsVisible = self.shouldShowNeedManualGlucose
+        let mealIsVisible = self.shouldShowMeal // influenced by landscape mode
 
         tableView.beginUpdates()
 
@@ -666,6 +716,28 @@ final class StatusTableViewController: ChartsTableViewController {
                         cell.accessoryView = nil
                     }
                 }
+            case (.manualBolus(dose: let oldDose, at: let oldDate),
+                  .manualBolus(dose: let newDose, at: let newDate)):
+                // Ensure we have a change
+                guard oldDose != newDose || oldDate != newDate else {
+                    break
+                }
+
+                // If the rate or date change, reload the row
+                if oldDose != newDose || oldDate != newDate {
+                    self.tableView.reloadRows(at: [statusIndexPath], with: animated ? .fade : .none)
+                }
+            case (.manualCarbs(dose: let oldDose, at: let oldDate),
+                  .manualCarbs(dose: let newDose, at: let newDate)):
+                // Ensure we have a change
+                guard oldDose != newDose || oldDate != newDate else {
+                    break
+                }
+
+                // If the rate or date change, reload the row
+                if oldDose != newDose || oldDate != newDate {
+                    self.tableView.reloadRows(at: [statusIndexPath], with: animated ? .fade : .none)
+                }
             case (.enactingBolus, .enactingBolus):
                 break
             case (.bolusing(let oldDose), .bolusing(let newDose)):
@@ -683,6 +755,33 @@ final class StatusTableViewController: ChartsTableViewController {
             self.tableView.insertRows(at: [statusIndexPath], with: animated ? .top : .none)
         case (true, false):
             self.tableView.deleteRows(at: [statusIndexPath], with: animated ? .top : .none)
+        default:
+            break
+        }
+
+        let glucoseIndexPath = IndexPath(row: 0, section: Section.glucose.rawValue)
+        switch (glucoseWasVisible, glucoseIsVisible) {
+        case (true, true):
+            if oldNeedManualGlucose != newNeedManualGlucose {
+                self.tableView.reloadRows(at: [glucoseIndexPath], with: animated ? .top : .none)
+            }
+        case (false, true):
+            self.tableView.insertRows(at: [glucoseIndexPath], with: animated ? .top : .none)
+        case (true, false):
+            self.tableView.deleteRows(at: [glucoseIndexPath], with: animated ? .top : .none)
+        default:
+            break
+        }
+
+        let mealIndexPath = IndexPath(row: 0, section: Section.meal.rawValue)
+        switch (mealWasVisible, mealIsVisible) {
+        case (true, true):
+            // TODO(Erik) Make dependent on mealInformation changing.
+            self.tableView.reloadRows(at: [mealIndexPath], with: .none)
+        case (false, true):
+            self.tableView.insertRows(at: [mealIndexPath], with: animated ? .top : .none)
+        case (true, false):
+            self.tableView.deleteRows(at: [mealIndexPath], with: animated ? .top : .none)
         default:
             break
         }
@@ -747,6 +846,10 @@ final class StatusTableViewController: ChartsTableViewController {
             return ChartRow.count
         case .status:
             return shouldShowStatus ? StatusRow.count : 0
+        case .meal:
+            return shouldShowMeal ? 1 : 0
+        case .glucose:
+            return shouldShowNeedManualGlucose ? 1 : 0
         }
     }
 
@@ -821,7 +924,7 @@ final class StatusTableViewController: ChartsTableViewController {
 
                     if let basalAdjustment = dose.basalAdjustment, dose.bolusUnits == 0 {
                         cell.titleLabel.text = NSLocalizedString("Recommended Basal", comment: "The title of the cell displaying a recommended temp basal value")
-                        text = String(format: NSLocalizedString("%1$@ U/hour", comment: "The format for recommended temp basal rate and time. (1: localized rate number)"), NumberFormatter.localizedString(from: NSNumber(value: basalAdjustment.unitsPerHour), number: .decimal))
+                        text = String(format: NSLocalizedString("%1$@ U/h", comment: "The format for recommended temp basal rate and time. (1: localized rate number)"), NumberFormatter.localizedString(from: NSNumber(value: basalAdjustment.unitsPerHour), number: .decimal))
                     } else {
                         let bolusUnitsStr = quantityFormatter.string(from: HKQuantity(unit: .internationalUnit(), doubleValue: dose.bolusUnits), for: .internationalUnit()) ?? ""
                         cell.titleLabel.text = NSLocalizedString("Recommended Auto-Bolus", comment: "The title of the cell displaying a recommended automatic bolus value")
@@ -840,6 +943,46 @@ final class StatusTableViewController: ChartsTableViewController {
                     } else {
                         cell.accessoryView = nil
                     }
+                    return cell
+                case .manualBolus(dose: let dose, at: let date):
+                    let cell = getTitleSubtitleCell()
+                    let timeFormatter = DateFormatter()
+                    timeFormatter.dateStyle = .none
+                    timeFormatter.timeStyle = .short
+
+                    var text: String
+
+                    let bolusUnitsStr = quantityFormatter.string(from: HKQuantity(unit: .internationalUnit(), doubleValue: dose.amount), for: .internationalUnit()) ?? ""
+                        cell.titleLabel.text = NSLocalizedString("Recommended Manual-Bolus", comment: "The title of the cell displaying a recommended manual bolus value")
+                        text = String(format: NSLocalizedString("%1$@ ", comment: "The format for recommended bolus string.  (1: localized bolus volume)" ), bolusUnitsStr)
+
+                    text += String(format: NSLocalizedString(" @ %1$@", comment: "The format for dose recommendation time. (1: localized time)"), timeFormatter.string(from: date))
+
+                    cell.subtitleLabel.text = text
+
+                    cell.selectionStyle = .default
+
+                    cell.accessoryView = nil
+                    return cell
+                case .manualCarbs(dose: let dose, at: let date):
+                    let cell = getTitleSubtitleCell()
+                    let timeFormatter = DateFormatter()
+                    timeFormatter.dateStyle = .none
+                    timeFormatter.timeStyle = .short
+
+                    var text: String
+
+                    let carbUnitsStr = quantityFormatter.string(from: HKQuantity(unit: HKUnit.gram(), doubleValue: dose.carbs), for: HKUnit.gram()) ?? ""
+                        cell.titleLabel.text = NSLocalizedString("Recommended Carbs", comment: "The title of the cell displaying a recommended carb amount")
+                        text = String(format: NSLocalizedString("%1$@ ", comment: "The format for recommended carb string.  (1: localized carb amount)" ), carbUnitsStr)
+
+                    text += String(format: NSLocalizedString(" @ %1$@", comment: "The format for dose recommendation time. (1: localized time)"), timeFormatter.string(from: date))
+
+                    cell.subtitleLabel.text = text
+
+                    cell.selectionStyle = .default
+
+                    cell.accessoryView = nil
                     return cell
                 case .scheduleOverrideEnabled(let override):
                     let cell = getTitleSubtitleCell()
@@ -893,6 +1036,7 @@ final class StatusTableViewController: ChartsTableViewController {
                     indicatorView.startAnimating()
                     cell.accessoryView = indicatorView
                     return cell
+                    
                 case .pumpSuspended(let resuming):
                     let cell = getTitleSubtitleCell()
                     cell.titleLabel.text = NSLocalizedString("Pump Suspended", comment: "The title of the cell indicating the pump is suspended")
@@ -910,8 +1054,112 @@ final class StatusTableViewController: ChartsTableViewController {
                     return cell
                 }
             }
+            case .meal:
+                let cell = tableView.dequeueReusableCell(withIdentifier: "MealTableViewCell", for: indexPath) as! MealTableViewCell
+                //let dataSource = FoodRecentCollectionViewDataSource()
+
+                var foodPicks = FoodPicks()
+
+                var undoPossible = false
+                if let mi = self.mealInformation /*, let mealEnd = mi.end, mealEnd.timeIntervalSinceNow > TimeInterval(minutes: -30)*/ {
+                    let intcarbs = Int(mi.carbs)
+                    cell.currentCarbLabel.text = "\(intcarbs) g"
+                    foodPicks = mi.picks
+    //                if let estimator = mi.estimator {
+    //                    let td = timeFormatter.string(from: estimator.start)
+    //                    let ti = Int(estimator.absorbed)
+    //                    let tr = Int(estimator.rate)
+    //
+    //                    cell.debugLabelTop.text = "@\(td)"
+    //                    cell.debugLabelBottom.text = "\(ti) g, \(tr) g/h"
+    //                } else {
+                        cell.debugLabelTop.text = ""
+                        cell.debugLabelBottom.text = ""
+
+    //                }
+                    if let start = mi.start, let end = mi.end {
+                        let t1 = timeFormatter.string(from: start)
+                        let t2 = timeFormatter.string(from: end)
+                        if start > end {
+                            // meal not started, show nothing.
+                            cell.currentCarbDate.text = "(tap to eat)"
+                        } else if t1 == t2 {
+                            cell.currentCarbDate.text = "\(t1)"
+                        } else {
+                            cell.currentCarbDate.text = "\(t1) - \(t2)"
+                        }
+                    } else {
+
+                        cell.currentCarbDate.text = "(tap to eat)"
+
+                    }
+                    undoPossible = mi.undoPossible
+                } else {
+                    cell.currentCarbLabel.text = ""
+                    cell.currentCarbDate.text = ""
+                    cell.debugLabelTop.text = ""
+                    cell.debugLabelBottom.text = ""
+                    cell.currentCarbLabel.text = "0 g"
+                    cell.currentCarbDate.text = "(tap to eat)"
+                }
+
+                if undoPossible, mealInformation?.lastCarbEntry != nil {
+                    cell.undoLabel.text = "Undo"
+                    cell.undoLabel.backgroundColor = UIColor.orange
+                } else {
+                    cell.undoLabel.text = ""
+                    cell.undoLabel.backgroundColor = UIColor.white
+                    /*
+                     if picks.count == 0 {
+                     cell.undoLabel.text = "Start\nMeal"
+                     } else {
+                     cell.undoLabel.text = "Add\nmore"
+                     }
+                     */
+                }
+                //cell.undoLabel.frame = cell.lastItemView.frame
+                cell.leftImageView.tintColor = UIColor.COBTintColor
+                cell.leftImageView.image = UIImage(named: "fork")?.withRenderingMode(.alwaysTemplate)
+                // cell.leftImageView.image?.renderingMode = .alwaysTemplate
+                //cell.leftButton.tintColor = UIColor.COBTintColor
+                //cell.leftButton.render
+                //cell.recentFoodCollectionView.collectionViewLayout = FoodRecentPickerFlowLayout()
+                cell.delegate = self
+                if cell.recentFoodCollectionView.dataSource == nil {
+                    cell.recentFoodCollectionView.dataSource = foodRecentCollectionViewDataSource //as UICollectionViewDataSource
+                }
+                foodRecentCollectionViewDataSource.foodManager = deviceManager.foodManager
+                foodRecentCollectionViewDataSource.foodPicks = foodPicks
+                cell.recentFoodCollectionView.reloadData()
+                cell.recentFoodCollectionView.collectionViewLayout.invalidateLayout()
+                return cell
+
+            case .glucose:
+                let timeFormatter = DateFormatter()
+                timeFormatter.dateStyle = .none
+                timeFormatter.timeStyle = .short
+
+                let cell = tableView.dequeueReusableCell(withIdentifier: TitleSubtitleTableViewCell.className, for: indexPath) as! TitleSubtitleTableViewCell
+                cell.selectionStyle = .none
+                cell.titleLabel.text = "🩸 No blood glucose!"
+                if let glucoseDate = displayNeedManualGlucose {
+                    cell.subtitleLabel?.text = String(format: NSLocalizedString(" @ %1$@", comment: "The format for last glucose time. (1: localized time)"), timeFormatter.string(from: glucoseDate))
+                } else {
+                    cell.subtitleLabel?.text = nil
+                }
+                cell.accessoryView = nil
+                cell.selectionStyle = .default
+                return cell
         }
     }
+    
+    private lazy var timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+
+        return formatter
+    }()
 
     private func tableView(_ tableView: UITableView, updateSubtitleFor cell: ChartTableViewCell, at indexPath: IndexPath) {
         switch Section(rawValue: indexPath.section)! {
@@ -948,6 +1196,10 @@ final class StatusTableViewController: ChartsTableViewController {
             }
         case .hud, .status:
             break
+        case .glucose:
+            break
+        case .meal:
+            break
         }
     }
 
@@ -976,12 +1228,26 @@ final class StatusTableViewController: ChartsTableViewController {
             }
         case .hud, .status:
             return UITableView.automaticDimension
+        case .meal:
+            // return 120  //UITableViewAutomaticDimension
+
+            if let mi = self.mealInformation, let lastEntry = mi.lastCarbEntry, lastEntry.foodPicks().picks.count > 0 {
+                return 110
+            } else {
+                return 70
+            }
+
+        case .glucose:
+            return UITableView.automaticDimension
         }
     }
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         switch Section(rawValue: indexPath.section)! {
         case .charts:
+            if !expertMode {
+                break
+            }
             switch ChartRow(rawValue: indexPath.row)! {
             case .glucose:
                 performSegue(withIdentifier: PredictionTableViewController.className, sender: indexPath)
@@ -1013,6 +1279,25 @@ final class StatusTableViewController: ChartsTableViewController {
                             }
                         }
                     }
+                case .manualBolus(dose: let dose, at: _):
+                    //self.updateHUDandStatusRows(statusRowMode: .recommendedDose(dose: dose, at: date, enacting: true), newSize: nil, animated: true)
+                    self.deviceManager.enactBolus(units: dose.amount) { (error) in
+                        DispatchQueue.main.async {
+                            self.updateHUDandStatusRows(statusRowMode: .hidden, newSize: nil, animated: true)
+
+                            if let error = error {
+                                self.log.error("Failed to enact recommended bolus: %{public}@", String(describing: error))
+                                self.present(UIAlertController(with: error), animated: true)
+                            } else {
+                                self.refreshContext.update(with: .status)
+                                self.log.debug("[reloadData] after manually enacting bolus")
+                                self.reloadData()
+                            }
+                        }
+                    }
+                case .manualCarbs(dose: _, at: _):
+                    performSegue(withIdentifier: CarbEntryViewController.className, sender: indexPath)
+
                 case .pumpSuspended(let resuming) where !resuming:
                     self.updateHUDandStatusRows(statusRowMode: .pumpSuspended(resuming: true) , newSize: nil, animated: true)
                     self.deviceManager.pumpManager?.resumeDelivery() { (error) in
@@ -1062,6 +1347,11 @@ final class StatusTableViewController: ChartsTableViewController {
             }
         case .hud:
             break
+        case .meal:
+            tableView.deselectRow(at: indexPath, animated: true)
+        case .glucose:
+            tableView.deselectRow(at: indexPath, animated: true)
+            performSegue(withIdentifier: CarbEntryViewController.className, sender: indexPath)
         }
     }
 
@@ -1092,6 +1382,7 @@ final class StatusTableViewController: ChartsTableViewController {
         case let vc as CarbEntryViewController:
             vc.deviceManager = deviceManager
             vc.glucoseUnit = statusCharts.glucose.glucoseUnit
+            vc.currentGlucose = validGlucose
             vc.defaultAbsorptionTimes = deviceManager.loopManager.carbStore.defaultAbsorptionTimes
             vc.preferredUnit = deviceManager.loopManager.carbStore.preferredUnit
 
@@ -1105,6 +1396,7 @@ final class StatusTableViewController: ChartsTableViewController {
             vc.deviceManager = deviceManager
             vc.glucoseUnit = statusCharts.glucose.glucoseUnit
             vc.configuration = .manualCorrection
+            vc.expertMode = expertMode
             AnalyticsManager.shared.didDisplayBolusScreen()
         case let vc as OverrideSelectionViewController:
             if deviceManager.loopManager.settings.futureOverrideEnabled() {
@@ -1117,12 +1409,37 @@ final class StatusTableViewController: ChartsTableViewController {
             vc.deviceManager = deviceManager
         case let vc as SettingsTableViewController:
             vc.dataManager = deviceManager
+        case let vc as NewFoodPickerViewController:
+            deviceManager.foodManager.updatePopular()
+            vc.foodManager = deviceManager.foodManager
         default:
             break
         }
     }
 
     @IBAction func unwindFromEditing(_ segue: UIStoryboardSegue) {}
+
+    @IBAction func unwindFromCarbEntryViewController(_ segue: UIStoryboardSegue) {
+        guard let carbEntryViewController = segue.source as? CarbEntryViewController else {
+            return
+        }
+
+        guard carbEntryViewController.closeWithContinue else {
+            return
+        }
+
+        if carbEntryViewController.updatedCarbEntry != nil {
+            if #available(iOS 12.0, *) {
+                let interaction = INInteraction(intent: NewCarbEntryIntent(), response: nil)
+                interaction.donate { [weak self] (error) in
+                    if let error = error {
+                        self?.log.error("Failed to donate intent: %{public}@", String(describing: error))
+                    }
+                }
+            }
+        }
+        addCarbAndGlucose(carbEntry: carbEntryViewController.updatedCarbEntry, glucoseSample: carbEntryViewController.glucoseSample)
+    }
 
     @IBAction func unwindFromBolusViewController(_ segue: UIStoryboardSegue) {
         guard let bolusViewController = segue.source as? BolusViewController else {
@@ -1222,6 +1539,49 @@ final class StatusTableViewController: ChartsTableViewController {
         }
     }
 
+    // EXPERT MODE
+    private var expertMode : Bool = false
+    private var settingsTouchTime : Date? = nil
+    @objc func toggleExpertMode(_ sender: UILongPressGestureRecognizer) {
+        guard let toolbar = navigationController?.toolbar else {
+            return
+        }
+        let location = sender.location(in: toolbar)
+        let width = toolbar.frame.width
+
+        if location.x > width/5 {
+            if sender.state == .began {
+                settingsTouchTime = Date()
+            }
+            if sender.state == .ended, let duration = settingsTouchTime?.timeIntervalSinceNow  {
+                if abs(duration) > TimeInterval(2) {
+                    expertMode = !expertMode
+                    // deviceManager.loopManager.addInternalNote("toggleExpertMode \(expertMode)")
+                    toolbarItems![8].isEnabled = expertMode
+                    if expertMode {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + TimeInterval(minutes: 30)) {
+                            self.expertMode = false
+                            self.toolbarItems![8].isEnabled = self.expertMode
+                        }
+                    }
+                } else {
+                    if !expertMode {
+                        let alert = UIAlertController(title: "Hint", message: "Press for 2 seconds to toggle expert mode.",
+                                                                preferredStyle: .alert)
+                        let action = UIAlertAction(title: NSLocalizedString("com.loudnate.LoopKit.errorAlertActionTitle", value: "OK", comment: "The title of the action used to dismiss an error alert"), style: .default)
+                        alert.addAction(action)
+                        alert.preferredAction = action
+                        present(alert, animated: true)
+
+                    } else {
+                        // performSegue(withIdentifier: SettingsTableViewController.className, sender: nil)
+                    }
+                }
+            }
+        }
+
+    }
+
     // MARK: - HUDs
 
     @IBOutlet var hudView: HUDView? {
@@ -1296,7 +1656,7 @@ final class StatusTableViewController: ChartsTableViewController {
         if error != nil {
             let alertController = UIAlertController(with: error!)
             let manualLoopAction = UIAlertAction(title: NSLocalizedString("Retry", comment: "The button text for attempting a manual loop"), style: .default, handler: { _ in
-                self.deviceManager.loopManager.loop()
+                self.deviceManager.loopManager.loop(trigger: "showLastError")
             })
             alertController.addAction(manualLoopAction)
             present(alertController, animated: true)
@@ -1364,6 +1724,183 @@ final class StatusTableViewController: ChartsTableViewController {
     @objc private func stepActiveScenarioBackward() {
         deviceManager.testingScenariosManager?.stepActiveScenarioBackward { _ in }
     }
+
+    // MODIFICATIONS
+
+    // MANUAL GLUCOSE ENTRY
+    private var validGlucose : GlucoseValue? = nil
+    private var needManualGlucose : Date? = nil
+    private var displayNeedManualGlucose : Date? = nil
+    // Notes
+    @IBAction func unwindFromNoteTableViewController(_ segue: UIStoryboardSegue) {
+        if let controller = segue.source as? NoteTableViewController, controller.saved {
+            let note = controller.text
+            deviceManager.loopManager.nightscoutDataManager?.uploadNote(date: Date(), note: note)
+        }
+    }
+
+    private func addCarbAndGlucose(carbEntry: NewCarbEntry?, glucoseSample : NewGlucoseSample? = nil) {
+        if let sample = glucoseSample {
+            let glucoseStore = deviceManager.loopManager.glucoseStore
+            glucoseStore.addGlucose(sample) { result in
+                switch result {
+                case .failure(let error):
+                    self.log.error("addCarbAndGlucose: addGlucose error %{public}@", String(describing: error))
+                case .success(let value):
+                    self.deviceManager.loopManager.nightscoutDataManager?.uploadMeterGlucose(date: value.startDate, glucose: value.quantity, comment: "Manually Entered")
+                }
+                if let carbEntry = carbEntry {
+                    self.updateCarbEntry(updatedEntry: carbEntry)
+                }
+            }
+        } else {
+            if let carbEntry = carbEntry {
+                updateCarbEntry(updatedEntry: carbEntry)
+            }
+        }
+    }
+
+    private func updateMealInformation(_ updateGroup: DispatchGroup, _ carbStore: CarbStore?) {
+        // This should be populated in LoopDataManager really.
+        guard let carbStore = carbStore else {
+            self.log.error("updateMealInformation - carbStore not available")
+            return
+        }
+        let endDate = Date()
+        let mealDate = endDate.addingTimeInterval(TimeInterval(minutes: -45))
+
+        let undoPossibleDate = endDate.addingTimeInterval(TimeInterval(minutes: -15))
+        updateGroup.enter()
+        carbStore.getCarbEntries(start: mealDate) { (result) in
+            switch result {
+            case .success(let values):
+
+                var mealStart = endDate
+                var mealEnd = mealDate
+                var carbs : Double = 0
+                var allPicks = FoodPicks()
+                for value in values {
+                    mealStart = min(mealStart, value.startDate)
+                    mealEnd = max(value.startDate, mealStart)
+                    let picks = value.foodPicks()
+                    for pick in picks.picks {
+                        allPicks.append(pick)
+                    }
+                    if let lastpick = picks.last {
+                        mealEnd = max(lastpick.date, mealEnd)
+                    }
+                    carbs = carbs + picks.carbs
+
+                }
+                carbs = round(carbs)
+
+                let undoPossible = undoPossibleDate <= mealEnd
+
+                self.mealInformation = (date: endDate, lastCarbEntry: values.last,
+                                        picks: allPicks,
+                                        start: mealStart, end: mealEnd, carbs: carbs, undoPossible: undoPossible)
+
+                self.log.default("updateMealInformation - %{public}@", String(describing: self.mealInformation))
+            case .failure(let error):
+                self.log.error("updateMealInformation - %{public}@", String(describing:error))
+            }
+            updateGroup.leave()
+        }
+
+    }
+
+    func updateCarbEntry(updatedEntry: NewCarbEntry) {
+        deviceManager.loopManager.addCarbEntryAndRecommendBolus(updatedEntry) { (result) -> Void in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let recommendation):
+                    if self.active && self.visible, let bolus = recommendation?.amount, bolus > 0 {
+                        if self.deviceManager.loopManager.settings.dosingStrategy != .automaticBolus {
+                            if self.bolusState == .none {
+                                self.performSegue(withIdentifier: BolusViewController.className, sender: recommendation)
+                            } else {
+                                // Bolus in progress, skip but give warning?
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    // Ignore bolus wizard errors
+                    if error is CarbStore.CarbStoreError {
+                        self.present(UIAlertController(with: error), animated: true)
+                    } else {
+                        self.log.error("updateCarbEntry: addCarbError - %{public}@", String(describing: error))
+                    }
+                }
+            }
+        }
+    }
+
+    @IBAction func unwindFromNewFoodPickerViewController(_ segue: UIStoryboardSegue) {
+        if let controller = segue.source as? NewFoodPickerViewController, let pick = controller.foodPick {
+            addCarbAndGlucose(carbEntry: pick.carbEntry)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // self.needsRefresh = true
+                self.reloadData()
+            }
+        }
+    }
+
+    private var foodRecentCollectionViewDataSource = FoodRecentCollectionViewDataSource()
+    private var displayMeal : Bool = true
+    typealias MealInformation = (date: Date, lastCarbEntry: StoredCarbEntry?, picks: FoodPicks, start: Date?, end: Date?, carbs: Double, undoPossible: Bool)
+    private var mealInformation : MealInformation?
+
+    func mealTableViewCellTap(_ sender : MealTableViewCell) {
+        //        performSegue(withIdentifier: FoodPickerViewController.className, sender: sender)
+        performSegue(withIdentifier: NewFoodPickerViewController.className, sender: sender)
+    }
+
+    func mealTableViewCellImageTap(_ sender : MealTableViewCell) {
+        if let mi = self.mealInformation, let lastCarbEntry = mi.lastCarbEntry, let pick = lastCarbEntry.foodPicks().last,  mi.undoPossible {
+
+            let alert = UIAlertController(title: "Undo Food Selection", message: "Are you sure you want to remove the last food pick \(pick.item.title) of \(pick.displayCarbs) g carbs?", preferredStyle: .alert)
+
+
+            alert.addAction(UIAlertAction(title: "Remove", style: .default, handler: { [weak alert] (_) in
+                self.log.default("removeLastFoodPick Alert %{public}@", String(describing: alert))
+                self.deviceManager.loopManager.removeCarbEntry(carbEntry: lastCarbEntry) { (error) in
+                    if let err = error {
+                        self.log.error("removeLastFoodPick Error  %{public}@", String(describing: err))
+                        let bla = UIAlertController(title: "Undo Food Selection", message: "removeLastFoodPick Alert \(err)?", preferredStyle: .alert)
+                        bla.addAction(UIAlertAction(title: "Back", style: .cancel, handler: nil))
+                        self.present(bla, animated: true, completion: nil)
+                    }
+                    DispatchQueue.main.async {
+                        self.reloadData()
+                    }
+                }
+            }))
+
+            alert.addAction(UIAlertAction(title: "Back", style: .cancel, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+
+        } else {
+            //            performSegue(withIdentifier: FoodPickerViewController.className, sender: sender)
+            performSegue(withIdentifier: NewFoodPickerViewController.className, sender: sender)
+
+        }
+    }
+    @objc func showNote(_ sender: UIBarButtonItem) {
+        performSegue(withIdentifier: NoteTableViewController.className, sender: sender)
+    }
+
+    private func createNoteButtonItem() -> UIBarButtonItem {
+        let originalImage = #imageLiteral(resourceName: "pencil")
+        let scaledIcon = UIImage(cgImage: originalImage.cgImage!, scale: 8, orientation: originalImage.imageOrientation)
+
+        let item = UIBarButtonItem(image: scaledIcon, style: .plain, target: self, action: #selector(showNote(_:)))
+        item.accessibilityLabel = NSLocalizedString("Note Taking", comment: "The label of the note taking button")
+
+        item.tintColor = UIColor(red: 249.0/255, green: 229.0/255, blue: 0.0/255, alpha: 1.0)
+
+        return item
+    }
 }
 
 extension StatusTableViewController: CompletionDelegate {
@@ -1381,6 +1918,11 @@ extension StatusTableViewController: PumpManagerStatusObserver {
 
         self.basalDeliveryState = status.basalDeliveryState
         self.bolusState = status.bolusState
+
+        DispatchQueue.main.async {
+            self.toolbarItems![4].isEnabled = status.bolusState == .none
+        }
+
     }
 }
 
@@ -1394,6 +1936,7 @@ extension StatusTableViewController: DoseProgressObserver {
             self.bolusProgressReporter = nil
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: {
                 self.bolusState = .none
+                self.toolbarItems![4].isEnabled = true
                 self.reloadData(animated: true)
             })
         }

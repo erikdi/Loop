@@ -38,8 +38,9 @@ public struct LoopSettings: Equatable {
 
     public let dynamicCarbAbsorptionEnabled = true
 
-    public static let defaultCarbAbsorptionTimes: CarbStore.DefaultAbsorptionTimes = (fast: .hours(2), medium: .hours(3), slow: .hours(4))
-
+    public static let defaultCarbAbsorptionTimes: CarbStore.DefaultAbsorptionTimes = (fast: .hours(2), medium: .hours(3), slow: .hours(5))
+    public static let absorptionTimeMultiplier = 1.0
+    
     public var glucoseTargetRangeSchedule: GlucoseRangeSchedule?
 
     public var preMealTargetRange: DoubleRange?
@@ -53,6 +54,8 @@ public struct LoopSettings: Equatable {
     public var maximumBasalRatePerHour: Double?
 
     public var maximumBolus: Double?
+
+    public var maximumInsulinOnBoard: Double?
 
     public var suspendThreshold: GlucoseThreshold? = nil
 
@@ -77,7 +80,11 @@ public struct LoopSettings: Equatable {
 
     public let defaultWatchBolusPickerValue = 1.0 // %
     
-    public let bolusPartialApplicationFactor = 0.4 // %
+    public let bolusPartialApplicationFactor = 1.05 // %
+
+    public let automatedBolusThreshold = 0.1
+    public let automaticBolusInterval = TimeInterval(minutes: 3)
+    public let automaticBolusCarbDistance = TimeInterval(minutes: 2)
 
     // MARK - Display settings
 
@@ -98,7 +105,7 @@ public struct LoopSettings: Equatable {
     public func allowedSensitivityValues(for unit: HKUnit) -> [Double] {
         switch unit {
         case HKUnit.milligramsPerDeciliter:
-            return (10...500).map { Double($0) }
+            return (50...200).map { Double($0) }
         case HKUnit.millimolesPerLiter:
             return (6...270).map { Double($0) / 10.0 }
         default:
@@ -260,6 +267,8 @@ extension LoopSettings: RawRepresentable {
 
         self.maximumBolus = rawValue["maximumBolus"] as? Double
 
+        self.maximumInsulinOnBoard = rawValue["maximumInsulinOnBoard"] as? Double
+
         if let rawThreshold = rawValue["minimumBGGuard"] as? GlucoseThreshold.RawValue {
             self.suspendThreshold = GlucoseThreshold(rawValue: rawThreshold)
         }
@@ -268,7 +277,6 @@ extension LoopSettings: RawRepresentable {
             let dosingStrategy = DosingStrategy(rawValue: rawDosingStrategy) {
             self.dosingStrategy = dosingStrategy
         }
-
     }
 
     public var rawValue: RawValue {
@@ -284,6 +292,7 @@ extension LoopSettings: RawRepresentable {
         raw["scheduleOverride"] = scheduleOverride?.rawValue
         raw["maximumBasalRatePerHour"] = maximumBasalRatePerHour
         raw["maximumBolus"] = maximumBolus
+        raw["maximumInsulinOnBoard"] = maximumInsulinOnBoard
         raw["minimumBGGuard"] = suspendThreshold?.rawValue
         raw["dosingStrategy"] = dosingStrategy.rawValue
 

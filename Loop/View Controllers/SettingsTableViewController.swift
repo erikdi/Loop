@@ -69,6 +69,7 @@ final class SettingsTableViewController: UITableViewController {
         case suspendThreshold
         case basalRate
         case deliveryLimits
+        case maximumInsulinOnBoard
         case insulinModel
         case dosingStrategy
         case carbRatio
@@ -275,11 +276,21 @@ final class SettingsTableViewController: UITableViewController {
             case .deliveryLimits:
                 configCell.textLabel?.text = NSLocalizedString("Delivery Limits", comment: "Title text for delivery limits")
 
-                if dataManager.loopManager.settings.maximumBolus == nil || dataManager.loopManager.settings.maximumBasalRatePerHour == nil {
+                if dataManager.loopManager.settings.maximumBolus == nil ||
+                    dataManager.loopManager.settings.maximumBasalRatePerHour == nil {
                     configCell.detailTextLabel?.text = SettingsTableViewCell.TapToSetString
                 } else {
                     configCell.detailTextLabel?.text = SettingsTableViewCell.EnabledString
                 }
+            case .maximumInsulinOnBoard:
+                    configCell.textLabel?.text = NSLocalizedString("Max IOB", comment: "The title text in settings")
+
+                    if let maximumInsulinOnBoard = dataManager.loopManager.settings.maximumInsulinOnBoard {
+                        let value = valueNumberFormatter.string(from: maximumInsulinOnBoard, unit: "U") ?? SettingsTableViewCell.TapToSetString
+                        configCell.detailTextLabel?.text = value
+                    } else {
+                        configCell.detailTextLabel?.text = SettingsTableViewCell.TapToSetString
+                    }
             case .basalRate:
                 configCell.textLabel?.text = NSLocalizedString("Basal Rates", comment: "The title text for the basal rate schedule")
 
@@ -527,6 +538,14 @@ final class SettingsTableViewController: UITableViewController {
                 vc.syncSource = dataManager.pumpManager
 
                 show(vc, sender: sender)
+            case .maximumInsulinOnBoard:
+                let maximumInsulinOnBoard = dataManager.loopManager.settings.maximumInsulinOnBoard
+                let vc = TextFieldTableViewController()
+                vc.value = "\(maximumInsulinOnBoard ?? 0)"
+                vc.delegate = self
+                vc.indexPath = indexPath
+                vc.title = sender?.textLabel?.text
+                self.show(vc, sender: sender)
             case .basalRate:
                 guard let pumpManager = dataManager.pumpManager else {
                     // Not allowing basal schedule entry without a configured pump.
@@ -841,6 +860,12 @@ extension SettingsTableViewController: LoopKitUI.TextFieldTableViewControllerDel
                     } else {
                         dataManager.loopManager.settings.suspendThreshold = nil
                     }
+                case .maximumInsulinOnBoard:
+                        if  let value = controller.value, let maxIOB = valueNumberFormatter.number(from: value)?.doubleValue {
+                            dataManager.loopManager.settings.maximumInsulinOnBoard = maxIOB
+                        } else {
+                            dataManager.loopManager.settings.maximumInsulinOnBoard = nil
+                        }
                 default:
                     assertionFailure()
                 }

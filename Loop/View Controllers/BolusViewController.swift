@@ -52,6 +52,8 @@ final class BolusViewController: ChartsTableViewController, IdentifiableClass, U
                 }
             }
         ]
+
+        bolusAmountTextField?.isEnabled = expertMode
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -60,8 +62,9 @@ final class BolusViewController: ChartsTableViewController, IdentifiableClass, U
         let spellOutFormatter = NumberFormatter()
         spellOutFormatter.numberStyle = .spellOut
 
-        let amount = bolusRecommendation?.amount ?? 0
+        let amount = roundedBolus(bolusRecommendation?.amount ?? 0)
         bolusAmountTextField.accessibilityHint = String(format: NSLocalizedString("Recommended Bolus: %@ Units", comment: "Accessibility hint describing recommended bolus units"), spellOutFormatter.string(from: amount) ?? "0")
+        acceptRecommendedBolus()
     }
 
     override func viewDidLayoutSubviews() {
@@ -142,7 +145,7 @@ final class BolusViewController: ChartsTableViewController, IdentifiableClass, U
 
     var bolusRecommendation: ManualBolusRecommendation? = nil {
         didSet {
-            let amount = bolusRecommendation?.amount ?? 0
+            let amount = roundedBolus(bolusRecommendation?.amount ?? 0)
             recommendedBolusAmountLabel?.text = bolusUnitsFormatter.string(from: amount)
 
             updateNotice()
@@ -172,7 +175,15 @@ final class BolusViewController: ChartsTableViewController, IdentifiableClass, U
         }
     }
 
+    var expertMode: Bool = false {
+        didSet {
+            bolusAmountTextField?.isEnabled = expertMode
+        }
+    }
+
     var maxBolus: Double = 25
+    var maximumInsulinOnBoard: Double? = nil
+    private var insulinOnBoard: InsulinValue? = nil
 
     private(set) var bolus: Double?
 
@@ -257,15 +268,19 @@ final class BolusViewController: ChartsTableViewController, IdentifiableClass, U
             if self.glucoseChart.scheduleOverride?.hasFinished() == true {
                 self.glucoseChart.scheduleOverride = nil
             }
-
+            self.insulinOnBoard = state.insulinOnBoard
             let maximumBolus = manager.settings.maximumBolus
+            let maximumInsulinOnBoard = manager.settings.maximumInsulinOnBoard
+
             let bolusRecommendation = try? state.recommendBolus(forPrediction: predictedGlucoseIncludingPendingInsulin)
 
             DispatchQueue.main.async {
                 if let maxBolus = maximumBolus {
                     self.maxBolus = maxBolus
                 }
-
+                if let maximumInsulinOnBoard = maximumInsulinOnBoard {
+                    self.maximumInsulinOnBoard = maximumInsulinOnBoard
+                }
                 self.bolusRecommendation = bolusRecommendation
                 self.computedInitialBolusRecommendation = true
             }
@@ -501,12 +516,31 @@ final class BolusViewController: ChartsTableViewController, IdentifiableClass, U
     }
 
     // MARK: - Actions
-   
+    private func roundedBolus(_ bolus: Double) -> Double {
+        return round(bolus * 10) / 10
+    }
+
     @objc private func confirmCarbEntryAndBolus(_ sender: Any) {
         bolusAmountTextField.resignFirstResponder()
 
         guard let bolus = enteredBolusAmount, let amountString = bolusUnitsFormatter.string(from: bolus) else {
             setBolusAndClose(0)
+            return
+        }
+
+        guard bolus > 0 else {
+            setBolusAndClose(0)
+            return
+        }
+        let rounded = roundedBolus(bolus)
+        guard rounded == bolus else {
+            bolusAmountTextField?.text = "\(rounded)"
+            let alert = UIAlertController(title: NSLocalizedString("Rounded Bolus", comment: "The title of the alert describing a rounded bolus validation error"), message: String(format: NSLocalizedString("The bolus amount has to be a multiple of 0.1, please try again.", comment: "Body of the alert describing a rounding bolus validation error.")),
+            preferredStyle: .alert)
+            let action = UIAlertAction(title: NSLocalizedString("com.loudnate.LoopKit.errorAlertActionTitle", value: "OK", comment: "The title of the action used to dismiss an error alert"), style: .default)
+            alert.addAction(action)
+            alert.preferredAction = action
+            present(alert, animated: true)
             return
         }
 
@@ -523,7 +557,59 @@ final class BolusViewController: ChartsTableViewController, IdentifiableClass, U
             present(alert, animated: true)
             return
         }
+        if let maxIOB = maximumInsulinOnBoard, maxIOB > 0 {
+            guard bolus + (insulinOnBoard?.value ?? 0) <= maxIOB else {
+                let alert = UIAlertController(title: NSLocalizedString("Would exceed Maximum Insulin on Board", comment: "The title of the alert describing a maximum insulin on board validation error"), message: String(format: NSLocalizedString("The insulin on board amount is %@ Units", comment: "Body of the alert describing a maximum iob validation error. (1: The localized max iob value)"),
+                                                                                                                                                                                                                        bolusUnitsFormatter.string(from: NSNumber(value: maxIOB)) ?? ""),
 
+                                              preferredStyle: .alert)
+                let action = UIAlertAction(title: NSLocalizedString("com.loudnate.LoopKit.errorAlertActionTitle", value: "OK", comment: "The title of the action used to dismiss an error alert"), style: .default)
+                alert.addAction(action)
+                alert.preferredAction = action
+
+                present(alert, animated: true)
+                return
+            }
+        }
+
+        let recommendation = roundedBolus(bolusRecommendation?.amount ?? 0)
+        guard bolus <= recommendation else {
+            //1. Create the alert controller.
+            let alert = UIAlertController(title: "Exceeds Recommended Bolus", message: "The bolus amount of \(bolus) U is higher than the recommended amount of \(recommendation) U. Please re-enter the amount to confirm.", preferredStyle: .alert)
+
+            //2. Add the text field. You can configure it however you need.
+            alert.addTextField { (textField) in
+                textField.text = ""
+                textField.keyboardType = UIKeyboardType.decimalPad
+                textField.autocorrectionType = UITextAutocorrectionType.no
+            }
+            // 3. Grab the value from the text field, and print it when the user clicks OK.
+            alert.addAction(UIAlertAction(title: "Deliver", style: .default, handler: { [weak alert] (_) in
+                //let result = alert?.textFields![0].text // Force unwrapping because we know it exists.
+                let wanted = "\(bolus)"
+                let result = alert?.textFields![0].text
+                if result != nil && result! == wanted {
+                    self.setBolusAndClose(bolus)
+                } else {
+                    let xalert = UIAlertController(title: NSLocalizedString("Exceeds Recommended Bolus", comment: "The title of the alert describing a recommended bolus validation error"), message: String(format: NSLocalizedString("The Validation failed (Recommended \(recommendation), wanted \(wanted), entered \(result!))", comment: "Body of the alert describing a recommended bolus validation error. (1: The localized recommended bolus value)")),
+                                                   preferredStyle: .alert)
+                    let action = UIAlertAction(title: NSLocalizedString("com.loudnate.LoopKit.errorAlertActionTitle", value: "OK", comment: "The title of the action used to dismiss an error alert"), style: .default)
+                    xalert.addAction(action)
+                    xalert.preferredAction = action
+
+                    self.present(xalert, animated: true)
+                    return
+                }
+            }))
+
+            alert.addAction(UIAlertAction(title: "Back", style: .default, handler: nil))
+
+            // 4. Present the alert.
+            self.present(alert, animated: true, completion: nil)
+
+            return
+        }
+/*
         let context = LAContext()
 
         if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil) {
@@ -537,8 +623,11 @@ final class BolusViewController: ChartsTableViewController, IdentifiableClass, U
                 }
             })
         } else {
+ */
             setBolusAndClose(bolus)
+        /*
         }
+ */
     }
 
     private func setBolusAndClose(_ bolus: Double) {

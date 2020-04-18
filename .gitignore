@@ -74,3 +74,6 @@ Loop.xcworkspace
 # Avoid checking in built assets
 Loop/DerivedAssets.xcassets/
 WatchApp/DerivedAssets.xcassets/
+
+# Automatically generated during build phase
+Loop/GitInfo.plist

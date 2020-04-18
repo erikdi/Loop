@@ -1,0 +1,386 @@
+{
+    "Apple": {
+        "categories": ["Fruit"],
+        "portion": 130,
+        "ratio": 14,
+        "image": null,
+        "title": null,
+        "type": "single"
+    },
+    
+    "Banana": {
+        "categories": ["Fruit"],
+        "portion": 120,
+        "ratio": 22,
+        "type": "single"
+    },
+    
+    "Weintraube": {
+        "categories": ["Fruit"],
+        "portion": 4,
+        "ratio": 16,
+        "initial": 5,
+        "image": "Grapes",
+        "type": "multiple"
+    },
+    
+    "Kirschen": {
+        "categories": ["Fruit"],
+        "portion": 10,
+        "ratio": 14,
+        "initial": 3,
+        "image": "Kirschen",
+        "type": "multiple"
+    },
+    
+    "◔ Wassermelone": {
+        "categories": ["Fruit"],
+        "portion": 50,
+        "ratio": 8,
+        "initial": 3,
+        "absorption": "fast",
+        "image": "Watermelon",
+        "type": "multiple"
+    },
+    
+    
+    "Kakao": {
+        "categories": ["Drinks"],
+        "portion": 250,
+        "ratio": 8,
+        "type": "drink"
+    },
+    
+    "Milch": {
+        "categories": ["Drinks"],
+        "portion": 250,
+        "ratio": 5,
+        "image": "Milk",
+        "type": "drink"
+    },
+    
+    "Saft": {
+        "categories": ["Drinks"],
+        "portion": 250,
+        "ratio": 10,
+        "absorption": "fast",
+        "type": "drink",
+        "image": "Juice"
+    },
+    
+    "Schorle": {
+        "categories": ["Drinks"],
+        "portion": 250,
+        "ratio": 6,
+        "absorption": "fast",
+        "type": "drink"
+    },
+    
+    "Fishsticks": {
+        "categories": ["Lunch"],
+        "portion": 30,
+        "ratio": 18,
+        "initial": 3,
+        "type": "multiple"
+    },
+    
+    "Rice": {
+        "categories": ["Lunch"],
+        "portion": 100,
+        "ratio": 27,
+        "type": "continuous"
+    },
+    
+    "Pasta": {
+        "categories": ["Lunch"],
+        "portion": 200,
+        "ratio": 25,
+        "absorption": "slow",
+        "type": "continuous"
+    },
+    
+    "Lasagne": {
+        "categories": ["Lunch"],
+        "portion": 250,
+        "ratio": 9,
+        "absorption": "slow",
+        "type": "continuous"
+    },
+   
+    "Nuggets": {
+        "categories": ["Lunch"],
+        "portion": 18,
+        "ratio": 15,
+        "initial": 1,
+        "type": "multiple"
+    },
+    
+    "Reiswaffel": {
+        "categories": ["Snack"],
+        "portion": 7,
+        "ratio": 81,
+        "initial": 1,
+        "type": "single"
+    },
+    
+    "Tomatensuppe": {
+        "categories": ["Lunch"],
+        "portion": 200,
+        "ratio": 7,
+        "type": "continuous"
+    },
+    
+    "2 Kartoffeln": {
+        "info": "ca. 2 Kartoffeln",
+        "image": "kartoffeln_zwei",
+        "categories": ["Lunch"],
+        "portion": 160,
+        "ratio": 15,
+        "type": "continuous"
+    },
+    
+    "Kartoffelbrei": {
+        "categories": ["Lunch"],
+        "portion": 200,
+        "ratio": 16,
+        "type": "continuous"
+    },
+
+    "Bratkartoffeln": {
+        "categories": ["Lunch"],
+        "portion": 200,
+        "ratio": 15,
+        "type": "continuous"
+    },
+    
+    "Kartoffelpuffer": {
+        "categories": ["Lunch"],
+        "portion": 60,
+        "ratio": 25,
+        "type": "multiple"
+    },
+    
+    "Pommes": {
+        "image": "FrenchFries",
+        "categories": ["Lunch"],
+        "portion": 180,
+        "ratio": 37,
+        "type": "continuous"
+    },
+    
+    "Pizza Slice": {
+        "image": "Pizza",
+        "info": "ca. 1/4 25cm Pizza",
+        "categories": ["Lunch"],
+        "portion": 80,
+        "ratio": 25,
+        "absorption": "slow",
+        "type": "multiple"
+    },
+    
+    "Kaiserschmarrn": {
+        "image": "Kaiserschmarrn",
+        "categories": ["Lunch"],
+        "portion": 200,
+        "ratio": 22,
+        "type": "single"
+    },
+    
+    "Apfelmus": {
+        "categories": ["Lunch", "Snack"],
+        "portion": 150,
+        "ratio": 15,
+        "type": "continuous"
+    },
+
+    "Spaetzle": {
+        "image": "Spaetzle",
+        "categories": ["Lunch"],
+        "portion": 200,
+        "ratio": 34,
+        "type": "single"
+    },
+    
+    "Chili con Carne": {
+        "image": "ChiliConCarne",
+        "categories": ["Lunch"],
+        "portion": 250,
+        "ratio": 18,
+        "type": "single"
+    },
+    
+    "Muesli, klein": {
+        "categories": ["Breakfast"],
+        "image": "Muesli",
+        "comment": "35g Muesli = 17g, 100g Milch = 6g",
+        "portion": 140,
+        "ratio": 18,
+        "absorption": "fast",
+        "type": "single"
+    },
+    
+    "Hoernchen": {
+        "categories": ["Bakery"],
+        "image": "schaer_croissant",
+        "portion": 55,
+        "ratio": 51,
+        "type": "single"
+    },
+
+    "Bon Matin": {
+        "categories": ["Bakery"],
+        "image": "schaer_bon_matin",
+        "portion": 50,
+        "ratio": 50,
+        "type": "single"
+    },
+
+    "Nutella Portion": {
+        "categories": ["Bakery"],
+        "image": "nutella_klein",
+        "portion": 6,
+        "ratio": 57,
+        "type": "single"
+    },
+    
+    "Ciabatta": {
+        "categories": ["Bakery"],
+        "image": "schaer_ciabatta",
+        "portion": 50,
+        "ratio": 46,
+        "type": "single"
+    },
+
+    "Hamburger": {
+        "categories": ["Bakery"],
+        "image": "schaer_hamburger",
+        "portion": 75,
+        "ratio": 45,
+        "type": "single"
+    },
+
+    "Weissbrot": {
+        "categories": ["Bakery"],
+        "image": "schaer_weissbrot",
+        "portion": 27,
+        "ratio": 45,
+        "type": "single"
+    },
+
+    "Landbrot": {
+        "categories": ["Bakery"],
+        "image": "schaer_landbrot",
+        "portion": 30,
+        "ratio": 40,
+        "type": "single"
+    },
+    
+    "KinderRiegel": {
+        "categories": ["Sweets"],
+        "portion": 13,
+        "ratio": 54,
+        "absorption": "fast",
+        "type": "multiple"
+    },
+    
+    "GlucoTabs": {
+        "categories": ["Sweets"],
+        "portion": 4,
+        "ratio": 100,
+        "absorption": "ultrafast",
+        "type": "multiple"
+    },
+    
+    "FrecheFreunde": {
+        "categories": ["Snack"],
+        "portion": 100,
+        "ratio": 15,
+        "type": "multiple"
+    },
+    
+    "Squetch": {
+        "categories": ["Snack"],
+        "portion": 90,
+        "ratio": 13,
+        "type": "multiple"
+    },
+    
+    "Gummibaerchen": {
+        "categories": ["Sweets"],
+        "image": "GummibearsSmall",
+        "portion": 2,
+        "ratio": 77,
+        "initial": 3,
+        "absorption": "fast",
+        "type": "multiple"
+    },
+
+    "Brezel": {
+        "categories": ["Bakery", "Lunch"],
+        "portion": 80,
+        "ratio": 57,
+        "type": "single"
+    },
+    
+    "Clementine": {
+        "categories": ["Fruit"],
+        "portion": 50,
+        "ratio": 12,
+        "initial": 1,
+        "type": "multiple"
+    },
+
+    "Apfelsine": {
+        "categories": ["Fruit"],
+        "image": "orange",
+        "portion": 130,
+        "ratio": 9,
+        "initial": 1,
+        "type": "single"
+    },
+
+    "Keks": {
+        "categories": ["Sweets"],
+        "portion": 20,
+        "ratio": 56,
+        "type": "single"
+    },
+    
+    "Kuchen": {
+        "categories": ["Sweets"],
+        "portion": 70,
+        "ratio": 50,
+        "type": "single"
+    },
+    
+    "M&M'S Choco": {
+        "categories": ["Sweets"],
+        "image": "m-m_choco",
+        "portion": 45,
+        "ratio": 69,
+        "type": "single"
+    },
+
+    "M&M'S Peanut": {
+        "categories": ["Sweets"],
+        "image": "m-m_peanut",
+        "portion": 45,
+        "ratio": 59,
+        "type": "single"
+    },
+
+    "Fruchtjoghurt": {
+        "categories": ["Snack"],
+        "portion": 150,
+        "ratio": 15,
+        "type": "continuous"
+    },
+    
+    "Custom": {
+        "categories": ["Custom", "Popular"],
+        "portion": 20,
+        "ratio": 100,
+        "type": "continuous"
+    },
+    
+}

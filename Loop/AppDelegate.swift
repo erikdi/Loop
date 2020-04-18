@@ -7,12 +7,13 @@
 //
 
 import UIKit
+import BackgroundTasks
 import Intents
 import LoopKit
 import UserNotifications
 
 @UIApplicationMain
-final class AppDelegate: UIResponder, UIApplicationDelegate {
+final class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
 
     private lazy var log = DiagnosticLogger.shared.forCategory("AppDelegate")
 
@@ -47,7 +48,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         log.default("Finishing launching")
         
         deviceManager = DeviceDataManager()
-        
+
         NotificationManager.authorize(delegate: self)
  
         let mainStatusViewController = UIStoryboard(name: "Main", bundle: Bundle(for: AppDelegate.self)).instantiateViewController(withIdentifier: "MainStatusViewController") as! StatusTableViewController
@@ -58,11 +59,13 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         
     }
 
+    var nightscoutURL: URL? {
+        return deviceManager?.remoteDataManager.nightscoutService.siteURL
+    }
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
         log.default("didFinishLaunchingWithOptions \(String(describing: launchOptions))")
-        
-        AnalyticsManager.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
 
         guard isAfterFirstUnlock else {
             log.default("Launching before first unlock; pausing launch...")
@@ -70,6 +73,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         }
 
         finishLaunch()
+        // We can only log to nightscout after setting up deviceManager.
+        AnalyticsManager.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
 
         let notificationOption = launchOptions?[.remoteNotification]
         
@@ -77,8 +82,59 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
             deviceManager?.handleRemoteNotification(notification)
         }
 
+        UIApplication.shared.setMinimumBackgroundFetchInterval(300)
+
+        if CLLocationManager.significantLocationChangeMonitoringAvailable() {
+            // The device does not support this service.
+            let locationManager = CLLocationManager()
+            locationManager.delegate? = self
+            locationManager.allowsBackgroundLocationUpdates = true
+            locationManager.startMonitoringSignificantLocationChanges()
+            log.error("Location Service for significant changes enabled.")
+        } else {
+            log.error("Location Service not available.")
+        }
+//        if #available(iOS 13.0, *) {
+//            BGTaskScheduler.shared.register(
+//                forTaskWithIdentifier: "com.loop.refresh",
+//                using: DispatchQueue.global()
+//            ) { task in
+//                self.handleAppRefresh(task)
+//            }
+//        } else {
+//            // Fallback on earlier versions
+//        }
         return true
     }
+
+
+//    private func handleAppRefresh(_ task: BGTask) {
+//        let queue = OperationQueue()
+//        queue.maxConcurrentOperationCount = 1
+//        let appRefreshOperation = AppRefreshOperation()
+//        queue.addOperation(appRefreshOperation)
+//
+//        task.expirationHandler = {
+//            queue.cancelAllOperations()
+//        }
+//
+//        let lastOperation = queue.operations.last
+//        lastOperation?.completionBlock = {
+//            task.setTaskCompleted(success: !(lastOperation?.isCancelled ?? false))
+//        }
+//
+//        scheduleAppRefresh()
+//    }
+//
+//    private func scheduleAppRefresh() {
+//        let request = BGAppRefreshTaskRequest(identifier: "com.loop.refresh")
+//        request.earliestBeginDate = Date(timeIntervalSinceNow: 300)
+//        do {
+//            try BGTaskScheduler.shared.submit(request)
+//        } catch {
+//            self.log.error(error)
+//        }
+//    }
 
     func applicationWillResignActive(_ application: UIApplication) {
         log.default(#function)
@@ -86,6 +142,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         log.default(#function)
+        // scheduleAppRefresh()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
@@ -98,6 +155,35 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationWillTerminate(_ application: UIApplication) {
         log.default(#function)
+    }
+
+    func refreshBackground(_ sender: String) {
+        let log = DiagnosticLogger.shared.forCategory("AppDelegate+Background")
+        log.default("refreshBackground \(sender)")
+        deviceManager?.updatePumpManagerBLEHeartbeatPreference()
+        /* if let pump = deviceManager?.pumpManager {
+            //deviceManager?.pumpManagerBLEHeartbeatDidFire(pump)
+            deviceManager?.cgmFetchDataIfNeeded()
+        }*/
+        deviceManager?.scheduleCgmFetchDataIfNeeded()
+    }
+
+    func locationManager(_ manager: CLLocationManager,  didUpdateLocations locations: [CLLocation]) {
+       let lastLocation = locations.last!
+       refreshBackground("didUpdateLocations \(lastLocation)")
+    }
+
+    func application(_ application: UIApplication, performFetchWithCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        refreshBackground("fetch \(nightscoutURL)")
+
+        guard let url = nightscoutURL else { return }
+
+        URLSession.shared.dataTask(with: url) { (data, response, err) in
+            let log = DiagnosticLogger.shared.forCategory("AppDelegate+Background")
+            log.default("AppDelegate Download \(String(describing: err)) \(url): \(response)")
+//            guard let data = data else { return }
+            completionHandler(.noData)
+        }.resume()
     }
 
     // MARK: - Continuity

@@ -35,6 +35,7 @@ enum MissingDataErrorDetail {
     case momentumEffect
     case carbEffect
     case insulinEffect
+    case insulinOnBoard
     
     var localizedDetail: String {
         switch self {
@@ -48,6 +49,9 @@ enum MissingDataErrorDetail {
             return NSLocalizedString("Carb effects", comment: "Details for missing data error when carb effects are missing")
         case .insulinEffect:
             return NSLocalizedString("Insulin effects", comment: "Details for missing data error when insulin effects are missing")
+        case .insulinOnBoard:
+                return NSLocalizedString("Insulin on board", comment: "Details for missing data error when insulin on board is missing")
+
         }
     }
     
@@ -62,6 +66,8 @@ enum MissingDataErrorDetail {
         case .carbEffect:
             return nil
         case .insulinEffect:
+            return nil
+        case .insulinOnBoard:
             return nil
         }
     }
