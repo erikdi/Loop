@@ -60,7 +60,7 @@ final class AnalyticsManager: IdentifiableClass {
             default:
                 break
             }
-            desc.append("\(key): \(val) ")
+            desc.append("\(key): \(val)")
         }
         desc.sort()
         let descStr = desc.joined(separator: ", ")
@@ -71,8 +71,12 @@ final class AnalyticsManager: IdentifiableClass {
     // MARK: - UIApplicationDelegate
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable: Any]?) {
-        let version = GitVersionInformation().description
-        logEvent("App Launch", withProperties: ["version": version])
+        logEvent("App Launch", withProperties: [
+            "version": Bundle.main.localizedNameAndVersion,
+            "gitDescribe": Bundle.main.gitDescribe ?? "n/a",
+            "gitRevision": Bundle.main.gitRevision ?? "n/a",
+            "buildDate": Bundle.main.buildDateString ?? "n/a"
+        ])
     }
 
     // MARK: - Screens

@@ -57,7 +57,11 @@ extension Bundle {
     var gitBranch: String? {
         return object(forInfoDictionaryKey: "com-loopkit-Loop-git-branch") as? String
     }
-    
+
+    var gitDescribe: String? {
+        return object(forInfoDictionaryKey: "com-loopkit-Loop-git-describe") as? String
+    }
+
     var sourceRoot: String? {
         return object(forInfoDictionaryKey: "com-loopkit-Loop-srcroot") as? String
     }

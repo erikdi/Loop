@@ -267,8 +267,6 @@
 		43FCEEBF22220CF30013DD30 /* LoopKitUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 437AFEE6203688CF008C4892 /* LoopKitUI.framework */; };
 		43FCEEC022220D1F0013DD30 /* LoopKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43F78D4B1C914197002152D1 /* LoopKit.framework */; };
 		4952870924479D8300B5B476 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4952870824479D8300B5B476 /* String.swift */; };
-		4952870D244B075D00B5B476 /* GitInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4952870C244B075D00B5B476 /* GitInfo.plist */; };
-		4952870F244B077400B5B476 /* GitVersionInformation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4952870E244B077300B5B476 /* GitVersionInformation.swift */; };
 		498E588724434115006310D6 /* FoodManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498E588624434115006310D6 /* FoodManager.swift */; };
 		498E588A24434130006310D6 /* FoodPickerCameraViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498E588824434130006310D6 /* FoodPickerCameraViewController.swift */; };
 		498E588B24434130006310D6 /* FoodPickerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498E588924434130006310D6 /* FoodPickerViewController.swift */; };
@@ -800,8 +798,6 @@
 		43FCEEBA22211C860013DD30 /* CarbEffectChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarbEffectChart.swift; sourceTree = "<group>"; };
 		43FCEEBC22212DD50013DD30 /* PredictedGlucoseChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictedGlucoseChart.swift; sourceTree = "<group>"; };
 		4952870824479D8300B5B476 /* String.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
-		4952870C244B075D00B5B476 /* GitInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = GitInfo.plist; sourceTree = "<group>"; };
-		4952870E244B077300B5B476 /* GitVersionInformation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitVersionInformation.swift; sourceTree = "<group>"; };
 		498E588624434115006310D6 /* FoodManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FoodManager.swift; sourceTree = "<group>"; };
 		498E588824434130006310D6 /* FoodPickerCameraViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FoodPickerCameraViewController.swift; sourceTree = "<group>"; };
 		498E588924434130006310D6 /* FoodPickerViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FoodPickerViewController.swift; sourceTree = "<group>"; };
@@ -1377,9 +1373,7 @@
 				7D7076511FE06EE1004AC8EA /* InfoPlist.strings */,
 				43EDEE6B1CF2E12A00393BE3 /* Loop.entitlements */,
 				43F5C2D41B92A4A6003EB13D /* Info.plist */,
-				4952870C244B075D00B5B476 /* GitInfo.plist */,
 				43776F8F1B8022E90074EA36 /* AppDelegate.swift */,
-				4952870E244B077300B5B476 /* GitVersionInformation.swift */,
 				43776F981B8022E90074EA36 /* DefaultAssets.xcassets */,
 				C1A3EED1235233E1007672E3 /* DerivedAssets.xcassets */,
 				43776F9A1B8022E90074EA36 /* LaunchScreen.storyboard */,
@@ -1974,7 +1968,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 43776FB61B8022E90074EA36 /* Build configuration list for PBXNativeTarget "Loop" */;
 			buildPhases = (
-				49528710244B095500B5B476 /* GitVersion Update */,
 				C1D1405722FB66DF00DA6242 /* Build Derived Assets */,
 				43776F881B8022E90074EA36 /* Sources */,
 				43776F891B8022E90074EA36 /* Frameworks */,
@@ -2342,7 +2335,6 @@
 				43FCBBC21E51710B00343C1B /* LaunchScreen.storyboard in Resources */,
 				7D70764F1FE06EE1004AC8EA /* InfoPlist.strings in Resources */,
 				C1A3EED2235233E1007672E3 /* DerivedAssets.xcassets in Resources */,
-				4952870D244B075D00B5B476 /* GitInfo.plist in Resources */,
 				7D7076631FE06EE4004AC8EA /* Localizable.strings in Resources */,
 				43776F971B8022E90074EA36 /* Main.storyboard in Resources */,
 				498E589D24437B43006310D6 /* FoodCatalog in Resources */,
@@ -2566,24 +2558,6 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${SRCROOT}/Scripts/copy-frameworks.sh\"\n";
 		};
-		49528710244B095500B5B476 /* GitVersion Update */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "GitVersion Update";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nDESCRIBE=`git describe --tags`\nCOMMIT=`git rev-parse HEAD`\nBRANCH=`git symbolic-ref --short HEAD`\nrm \"${PROJECT_DIR}/Loop/GitInfo.plist\"\n/usr/libexec/PlistBuddy -c \"Add :GIT_COMMIT_HASH string ${COMMIT}\" \"${PROJECT_DIR}/Loop/GitInfo.plist\"\n/usr/libexec/PlistBuddy -c \"Add :GIT_BRANCH string ${BRANCH}\" \"${PROJECT_DIR}/Loop/GitInfo.plist\"\n/usr/libexec/PlistBuddy -c \"Add :GIT_DESCRIBE string ${DESCRIBE}\" \"${PROJECT_DIR}/Loop/GitInfo.plist\"\n/usr/libexec/PlistBuddy -c \"Add :BUILD_CURRENT_DATE string `date`\" \"${PROJECT_DIR}/Loop/GitInfo.plist\"\n";
-		};
 		A942E448225FD9D500DD4980 /* Copy Frameworks with Carthage */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -2687,7 +2661,6 @@
 				4F70C2131DE90339006380B7 /* StatusExtensionContext.swift in Sources */,
 				43441A9C1EDB34810087958C /* StatusExtensionContext+LoopKit.swift in Sources */,
 				43C05CC521EC29E3006FB252 /* TextFieldTableViewCell.swift in Sources */,
-				4952870F244B077400B5B476 /* GitVersionInformation.swift in Sources */,
 				4FF4D1001E18374700846527 /* WatchContext.swift in Sources */,
 				4315D28A1CA5F45E00589052 /* DiagnosticLogger+LoopKit.swift in Sources */,
 				C1D289B522F90A52003FFBD9 /* BasalDeliveryState.swift in Sources */,

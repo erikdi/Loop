@@ -229,9 +229,9 @@ final class DeviceDataManager {
                 
                 let report = [
                     Bundle.main.localizedNameAndVersion,
-                    "* gitVersion: \(GitVersionInformation().description)",
                     "* gitRevision: \(Bundle.main.gitRevision ?? "N/A")",
                     "* gitBranch: \(Bundle.main.gitBranch ?? "N/A")",
+                    "* gitDescribe: \(Bundle.main.gitDescribe ?? "N/A")",
                     "* sourceRoot: \(Bundle.main.sourceRoot ?? "N/A")",
                     "* buildDateString: \(Bundle.main.buildDateString ?? "N/A")",
                     "* xcodeVersion: \(Bundle.main.xcodeVersion ?? "N/A")",
