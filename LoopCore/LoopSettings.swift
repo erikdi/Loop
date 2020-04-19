@@ -51,6 +51,7 @@ public struct LoopSettings: Equatable {
 
     public var scheduleOverride: TemporaryScheduleOverride?
 
+    public static let minimumBasalRatePerHour: Double = 0.025
     public var maximumBasalRatePerHour: Double?
 
     public var maximumBolus: Double?

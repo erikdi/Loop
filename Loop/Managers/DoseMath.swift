@@ -8,6 +8,7 @@
 
 import Foundation
 import HealthKit
+import LoopCore
 import LoopKit
 
 
@@ -67,8 +68,8 @@ extension InsulinCorrection {
         case .suspend:
             break
         }
-
-        rate = Swift.min(maxBasalRate, Swift.max(0, rate))
+        let minBasalRate = LoopSettings.minimumBasalRatePerHour
+        rate = Swift.min(maxBasalRate, Swift.max(minBasalRate, rate))
 
         rate = rateRounder?(rate) ?? rate
 
