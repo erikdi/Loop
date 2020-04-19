@@ -10,7 +10,7 @@ https://github.com/erikdi/cgm-remote-monitor/tree/erikdi/dev .
 - Based on automatic-bolus branch of Loop upstream, much less customization.
 - No custom Carb Entry dialog
 - No custom mealInformation chip
-- Remove retrospective correction
+- Remove custom aggressive retrospective correction
 - No minimumBasal setting anymore in UI, hardcoded in LoopSettings (minimumBasalRatePerHour)
 - Workout mode uses standard overrides, changed to allow 0% override.
 - Removed Bluetooth restart functionality.

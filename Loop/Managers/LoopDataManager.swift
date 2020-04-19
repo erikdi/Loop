@@ -690,12 +690,14 @@ extension LoopDataManager {
                         areStoredValuesContinuous: areStoredValuesContinuous
                     )))
                 }
-            } else if let previousValue = previousValue {
+            } else if let _ = previousValue {
                 self.logger.error("doseStore.addReservoirValue, duplicate dose.")
                 let error = DoseStore.DoseStoreError.persistenceError(description: "addReservoirValue duplicate", recoverySuggestion: "Wait and Retry")
                 completion(.failure(error))
             } else {
-                assertionFailure()
+                self.logger.error("doseStore.addReservoirValue, unknown condition.")
+                let error = DoseStore.DoseStoreError.persistenceError(description: "addReservoirValue unknown condition", recoverySuggestion: "Wait and Retry")
+                completion(.failure(error))
             }
         }
     }
@@ -1462,7 +1464,7 @@ extension LoopDataManager {
                 rateRounder: rateRounder,
                 isBasalRateScheduleOverrideActive: settings.scheduleOverride?.isBasalRateScheduleOverriden(at: startDate) == true
             )
-            self.logger.debug("Automatic Bolus recommendation \(dosingRecommendation)")
+            self.logger.debug("Automatic Bolus recommendation \(String(describing: dosingRecommendation))")
         case .tempBasalOnly:
             let temp = predictedGlucose.recommendedTempBasal(
                 to: glucoseTargetRange,
@@ -1477,7 +1479,7 @@ extension LoopDataManager {
                 isBasalRateScheduleOverrideActive: settings.scheduleOverride?.isBasalRateScheduleOverriden(at: startDate) == true
             )
             dosingRecommendation = AutomaticDoseRecommendation(basalAdjustment: temp, bolusUnits: 0)
-            self.logger.debug("Automatic Temp Basal recommendation \(dosingRecommendation)")
+            self.logger.debug("Automatic Temp Basal recommendation \(String(describing: dosingRecommendation))")
         }
         if iob.value <= maxIOB {
             if let dosingRecommendation = dosingRecommendation {
