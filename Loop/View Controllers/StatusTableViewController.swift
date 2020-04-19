@@ -780,7 +780,12 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
         switch (overrideWasVisible, overrideIsVisible) {
         case (true, true):
             switch (oldOverrideRowMode, self.overrideRowMode) {
+            case (.scheduleOverrideEnabled(let oldScheduleOverride), .scheduleOverrideEnabled(let newScheduleOverride)):
+                if oldScheduleOverride != newScheduleOverride {
+                    self.tableView.reloadRows(at: [overrideIndexPath], with: animated ? .fade : .none)
+                }
             default:
+                // Should not happen as the row does not show up in this case.
                 self.tableView.reloadRows(at: [overrideIndexPath], with: animated ? .fade : .none)
             }
         case (false, true):
