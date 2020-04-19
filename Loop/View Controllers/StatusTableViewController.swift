@@ -238,6 +238,10 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
         return !landscapeMode && statusRowMode.hasRow
     }
 
+    private var shouldShowOverride: Bool {
+        return !landscapeMode && overrideRowMode.hasRow
+    }
+
     private var shouldShowNeedManualGlucose: Bool {
         return !landscapeMode && (displayNeedManualGlucose != nil)
     }
@@ -558,11 +562,12 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
     private enum Section: Int {
         case hud = 0
         case status
+        case override
         case glucose // Glucose not available reminder
         case meal   // Meal Information
         case charts
 
-        static let count = 5
+        static let count = 6
     }
 
     // MARK: - Chart Section Data
@@ -623,6 +628,8 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
 
     private var statusRowMode = StatusRowMode.hidden
 
+    private var overrideRowMode = StatusRowMode.hidden
+
     private func determineStatusRowMode(
         recommendedDose: (recommendation: AutomaticDoseRecommendation, date: Date)? = nil,
         manualBolus: (recommendation: ManualBolusRecommendation, date: Date)? = nil
@@ -644,11 +651,6 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
             statusRowMode = .manualBolus(dose: dose, at: date)
         } else if let (recommendation: dose, date: date) = manualBolus, dose.carbs > 0 {
             statusRowMode = .manualCarbs(dose: dose, at: date)
-        } else if let scheduleOverride = deviceManager.loopManager.settings.scheduleOverride,
-            scheduleOverride.context != .preMeal && scheduleOverride.context != .legacyWorkout,
-            !scheduleOverride.hasFinished()
-        {
-            statusRowMode = .scheduleOverrideEnabled(scheduleOverride)
         } else {
             statusRowMode = .hidden
         }
@@ -656,15 +658,29 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
         return statusRowMode
     }
 
+    private func determineOverrideRowMode() -> StatusRowMode {
+        if let scheduleOverride = deviceManager.loopManager.settings.scheduleOverride,
+            scheduleOverride.context != .preMeal && scheduleOverride.context != .legacyWorkout,
+            !scheduleOverride.hasFinished()
+        {
+            return .scheduleOverrideEnabled(scheduleOverride)
+        } else {
+            return .hidden
+        }
+    }
+
     private func updateHUDandStatusRows(statusRowMode: StatusRowMode, newSize: CGSize?, animated: Bool) {
         let hudWasVisible = self.shouldShowHUD
         let statusWasVisible = self.shouldShowStatus
+        let overrideWasVisible = self.shouldShowOverride
         let mealWasVisible = self.shouldShowMeal
 
         let glucoseWasVisible = self.shouldShowNeedManualGlucose
 
         let oldStatusRowMode = self.statusRowMode
+        let oldOverrideRowMode = self.overrideRowMode
 
+        self.overrideRowMode = determineOverrideRowMode()
         self.statusRowMode = statusRowMode
 
         let oldNeedManualGlucose = self.displayNeedManualGlucose
@@ -677,6 +693,7 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
 
         let hudIsVisible = self.shouldShowHUD
         let statusIsVisible = self.shouldShowStatus
+        let overrideIsVisible = self.shouldShowOverride
         let glucoseIsVisible = self.shouldShowNeedManualGlucose
         let mealIsVisible = self.shouldShowMeal // influenced by landscape mode
 
@@ -755,6 +772,21 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
             self.tableView.insertRows(at: [statusIndexPath], with: animated ? .top : .none)
         case (true, false):
             self.tableView.deleteRows(at: [statusIndexPath], with: animated ? .top : .none)
+        default:
+            break
+        }
+
+        let overrideIndexPath = IndexPath(row: StatusRow.status.rawValue, section: Section.override.rawValue)
+        switch (overrideWasVisible, overrideIsVisible) {
+        case (true, true):
+            switch (oldOverrideRowMode, self.overrideRowMode) {
+            default:
+                self.tableView.reloadRows(at: [overrideIndexPath], with: animated ? .fade : .none)
+            }
+        case (false, true):
+            self.tableView.insertRows(at: [overrideIndexPath], with: animated ? .top : .none)
+        case (true, false):
+            self.tableView.deleteRows(at: [overrideIndexPath], with: animated ? .top : .none)
         default:
             break
         }
@@ -846,6 +878,8 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
             return ChartRow.count
         case .status:
             return shouldShowStatus ? StatusRow.count : 0
+        case .override:
+            return shouldShowOverride ? StatusRow.count : 0
         case .meal:
             return shouldShowMeal ? 1 : 0
         case .glucose:
@@ -895,7 +929,7 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
             cell.subtitleLabel?.textColor = UIColor.secondaryLabelColor
 
             return cell
-        case .status:
+        case .status, .override:
 
             func getTitleSubtitleCell() -> TitleSubtitleTableViewCell {
                 let cell = tableView.dequeueReusableCell(withIdentifier: TitleSubtitleTableViewCell.className, for: indexPath) as! TitleSubtitleTableViewCell
@@ -905,7 +939,8 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
 
             switch StatusRow(rawValue: indexPath.row)! {
             case .status:
-                switch statusRowMode {
+                let rowMode = Section(rawValue: indexPath.section)! == .status ? statusRowMode : overrideRowMode
+                switch rowMode {
                 case .hidden:
                     let cell = getTitleSubtitleCell()
                     cell.titleLabel.text = nil
@@ -1054,6 +1089,7 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
                     return cell
                 }
             }
+
             case .meal:
                 let cell = tableView.dequeueReusableCell(withIdentifier: "MealTableViewCell", for: indexPath) as! MealTableViewCell
                 //let dataSource = FoodRecentCollectionViewDataSource()
@@ -1196,6 +1232,8 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
             }
         case .hud, .status:
             break
+        case .override:
+            break
         case .glucose:
             break
         case .meal:
@@ -1226,19 +1264,14 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
             case .iob, .dose, .cob:
                 return max(106, 0.21 * availableSize)
             }
-        case .hud, .status:
+        case .hud, .status, .override, .glucose:
             return UITableView.automaticDimension
         case .meal:
-            // return 120  //UITableViewAutomaticDimension
-
             if let mi = self.mealInformation, let lastEntry = mi.lastCarbEntry, lastEntry.foodPicks().picks.count > 0 {
                 return 110
             } else {
                 return 70
             }
-
-        case .glucose:
-            return UITableView.automaticDimension
         }
     }
 
@@ -1256,12 +1289,12 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
             case .cob:
                 performSegue(withIdentifier: CarbAbsorptionViewController.className, sender: indexPath)
             }
-        case .status:
+        case .status, .override:
             switch StatusRow(rawValue: indexPath.row)! {
             case .status:
                 tableView.deselectRow(at: indexPath, animated: true)
-
-                switch statusRowMode {
+                let rowMode = Section(rawValue: indexPath.section)! == .status ? statusRowMode : overrideRowMode
+                switch rowMode {
                 case .recommendedDose(dose: let dose, at: let date, enacting: let enacting) where !enacting:
                     self.updateHUDandStatusRows(statusRowMode: .recommendedDose(dose: dose, at: date, enacting: true), newSize: nil, animated: true)
 
@@ -1299,7 +1332,7 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
                     performSegue(withIdentifier: CarbEntryViewController.className, sender: indexPath)
 
                 case .pumpSuspended(let resuming) where !resuming:
-                    self.updateHUDandStatusRows(statusRowMode: .pumpSuspended(resuming: true) , newSize: nil, animated: true)
+                    self.updateHUDandStatusRows(statusRowMode: .pumpSuspended(resuming: true), newSize: nil, animated: true)
                     self.deviceManager.pumpManager?.resumeDelivery() { (error) in
                         DispatchQueue.main.async {
                             if let error = error {
