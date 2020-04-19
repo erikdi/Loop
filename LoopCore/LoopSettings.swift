@@ -83,9 +83,21 @@ public struct LoopSettings: Equatable {
     
     public let bolusPartialApplicationFactor = 1.05 // %
 
+    // Erik branch
     public let automatedBolusThreshold = 0.1
     public let automaticBolusInterval = TimeInterval(minutes: 3)
     public let automaticBolusCarbDistance = TimeInterval(minutes: 2)
+
+    public var lastAutomaticBolus : Date = .distantPast
+    public var lastCarbChange : Date = .distantPast
+
+    public var lastAutosense : Date = .distantPast
+    public var lastAutotune : Date = .distantPast
+
+    public var autosenseFactor : Double = 1.0
+    public var autotuneCarbFactor : Double = 1.0
+    public var autotuneSensitivityFactor : Double = 1.0
+    public var autotuneBasalHourlyFactor : [Double] = []
 
     // MARK - Display settings
 
@@ -278,6 +290,13 @@ extension LoopSettings: RawRepresentable {
             let dosingStrategy = DosingStrategy(rawValue: rawDosingStrategy) {
             self.dosingStrategy = dosingStrategy
         }
+
+        self.lastAutomaticBolus = Date(timeIntervalSince1970: rawValue["lastAutomaticBolus"] as? TimeInterval ?? 0.0)
+        self.lastCarbChange = Date(timeIntervalSince1970: rawValue["lastCarbChange"] as? TimeInterval ?? 0.0)
+        self.lastAutosense = Date(timeIntervalSince1970: rawValue["lastAutosense"] as? TimeInterval ?? 0.0)
+        self.lastAutotune = Date(timeIntervalSince1970: rawValue["lastAutotune"] as? TimeInterval ?? 0.0)
+        self.autosenseFactor = rawValue["autosenseFactor"] as? Double ?? 1.0
+
     }
 
     public var rawValue: RawValue {
@@ -296,6 +315,12 @@ extension LoopSettings: RawRepresentable {
         raw["maximumInsulinOnBoard"] = maximumInsulinOnBoard
         raw["minimumBGGuard"] = suspendThreshold?.rawValue
         raw["dosingStrategy"] = dosingStrategy.rawValue
+
+        raw["lastAutomaticBolus"] = lastAutomaticBolus.timeIntervalSince1970
+        raw["lastCarbChange"] = lastCarbChange.timeIntervalSince1970
+        raw["lastAutosense"] = lastAutosense.timeIntervalSince1970
+        raw["lastAutotune"] = lastAutotune.timeIntervalSince1970
+        raw["autosenseFactor"] = autosenseFactor
 
         return raw
     }

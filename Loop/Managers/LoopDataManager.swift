@@ -260,9 +260,6 @@ final class LoopDataManager {
     fileprivate var lastLoopError: Error?
     fileprivate var loopInProgress : (date: Date, uuid: String, retry: Int, trigger: String)?
 
-    fileprivate var lastAutomaticBolus : Date? = nil
-    fileprivate var lastCarbChange : Date? = nil
-
     fileprivate var lastLowNotification : (date: Date, carbs: Double, sent: Bool)?
 
     /// A timeline of average velocity of glucose change counteracting predicted insulin effects
@@ -568,7 +565,7 @@ extension LoopDataManager {
                 }
             }
         }
-        lastCarbChange = Date()
+        settings.lastCarbChange = Date()
 
         if let replacingEntry = replacingEntry {
             carbStore.replaceCarbEntry(replacingEntry, withEntry: carbEntry, completion: addCompletion)
@@ -579,7 +576,7 @@ extension LoopDataManager {
 
     public func removeCarbEntry(carbEntry: StoredCarbEntry, _ completion: @escaping (_ error: Error?) -> Void) {
         self.logger.default("removeCarbEntry - original \(carbEntry)")
-        lastCarbChange = Date()
+        settings.lastCarbChange = Date()
         carbStore.deleteCarbEntry(carbEntry) { result in
             self.dataAccessQueue.async {
                 self.carbEffect = nil
@@ -620,7 +617,7 @@ extension LoopDataManager {
             self.lastRequestedBolus = nil
             self.recommendedManualBolus = nil
             self.recommendedDose = nil
-            self.lastAutomaticBolus = Date()
+            self.settings.lastAutomaticBolus = Date()
             self.insulinEffect = nil
             self.notify(forChange: .bolus)
 
@@ -782,11 +779,9 @@ extension LoopDataManager {
             return true
         }
         // Wait for mistakes in carb entry to clear.
-        if let carbChange = lastCarbChange {
-            guard abs(carbChange.timeIntervalSinceNow) > settings.automaticBolusCarbDistance else {
-                self.logger.default("isAutomaticDosingAllowed - last carbchange too close")
-                return false
-            }
+        guard abs(settings.lastCarbChange.timeIntervalSinceNow) > settings.automaticBolusCarbDistance else {
+            self.logger.default("isAutomaticDosingAllowed - last carbchange too close")
+            return false
         }
         // Avoid too small doses
         if recommended.recommendation.bolusUnits < settings.automatedBolusThreshold {
@@ -794,9 +789,8 @@ extension LoopDataManager {
             return false
         }
         // Avoid too close bolus'.
-        if let lastAutomaticBolus = self.lastAutomaticBolus, abs(lastAutomaticBolus.timeIntervalSinceNow) < settings.automaticBolusInterval {
+        if abs(settings.lastAutomaticBolus.timeIntervalSinceNow) < settings.automaticBolusInterval {
             self.logger.default("isAutomaticDosingAllowed - last automatic bolus too close")
-            // StatisticsManager.shared.inc("AutomatedBolus TooClose")
             return false
         }
         return true
@@ -1284,7 +1278,7 @@ extension LoopDataManager {
         }
 
         let halfAnHourAgo = Date().addingTimeInterval(TimeInterval(minutes:-30))
-        let lastBolus = lastAutomaticBolus ?? halfAnHourAgo
+        let lastBolus = settings.lastAutomaticBolus
         let since = max(lastBolus, halfAnHourAgo)
         var carbs = 0.0
         let updateGroup = DispatchGroup()
