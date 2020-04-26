@@ -12,27 +12,22 @@ import NightscoutUploadKit
 
 extension PersistedPumpEvent {
     func treatment(enteredBy source: String) -> NightscoutTreatment? {
-
+        NSLog("PersistedPumpEvent \(String(describing: type)) \(String(describing: raw))")
         if let raw = raw {
-            let model = PumpModel.model523
-            switch PumpEventType(rawValue: raw[0]) {
-            case .bgReceived:
-                if let bgReceived = BGReceivedPumpEvent(
-                    availableData: raw,
-                    pumpModel: model
-                    ) {
+            let model = PumpModel.model554
+            let type = PumpEventType(rawValue: raw[0])
+            let event = type?.eventType.init(availableData: raw, pumpModel: model)
+            switch event {
+            case let bgReceived as BGReceivedPumpEvent:
                     return BGCheckNightscoutTreatment(
                         timestamp: bgReceived.timestamp.date ?? date,
                         enteredBy: source,
                         glucose: bgReceived.amount,
                         glucoseType: .Meter,
                         units: .MGDL)
-                }
-            case .prime:
-                if let prime = PrimePumpEvent(
-                    availableData: raw,
-                    pumpModel: model
-                    ) {
+
+            case let prime as PrimePumpEvent:
+
                     let programmedAmount = prime.dictionaryRepresentation["programmedAmount"] ?? 0
                     let amount = prime.dictionaryRepresentation["amount"] ?? 0
                     let primeType = prime.dictionaryRepresentation["primeType"] ?? ""
@@ -41,45 +36,36 @@ extension PersistedPumpEvent {
                         enteredBy: source,
                         notes:  "Automatically added; Amount \(amount) Units, Programmed Amount \(programmedAmount) Units, Type \(primeType)",
                         eventType: "Site Change")
-                }
-            case .rewind:
-                if let rewind = RewindPumpEvent(
-                    availableData: raw,
-                    pumpModel: model
-                    ) {
+
+            case let rewind as RewindPumpEvent:
+
                     return NightscoutTreatment(
                         timestamp: rewind.timestamp.date ?? date,
                         enteredBy: source,
                         notes: "Automatically added",
                         eventType: "Insulin Change")
-                }
-            case .alarmPump:
-                if let alarm = PumpAlarmPumpEvent(
-                    availableData: raw,
-                    pumpModel: model
-                    ) {
+
+            case let alarm as PumpAlarmPumpEvent:
                     let note = "Pump Alarm \(alarm.alarmType)"
                     return NightscoutTreatment(
                         timestamp: alarm.timestamp.date ?? date,
                         enteredBy: source,
                         notes: note,
                         eventType: "Announcement")
-                }
-            case .battery:
-                if let battery = BatteryPumpEvent(availableData: raw,
-                pumpModel: model
-                ) {
+
+            case let battery as BatteryPumpEvent:
                     return NightscoutTreatment(
                         timestamp: battery.timestamp.date ?? date,
                         enteredBy: source,
                         notes:  "Automatically added",
                         eventType: "Pump Battery Change")
-                }
+
             default:
                 NSLog("Skipping event \(raw[0]).")
 
             }
         }
+
         // Doses can be inferred from other types of events, e.g. a No Delivery Alarm type indicates a suspend in delivery.
         // At the moment, Nightscout only supports straightforward events
         guard let type = type, let dose = dose, dose.type.pumpEventType == type else {

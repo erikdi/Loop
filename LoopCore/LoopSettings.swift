@@ -91,13 +91,27 @@ public struct LoopSettings: Equatable {
     public var lastAutomaticBolus : Date = .distantPast
     public var lastCarbChange : Date = .distantPast
 
-    public var lastAutosense : Date = .distantPast
-    public var lastAutotune : Date = .distantPast
+//    public var autosense = AutosenseSettings()
+//    public var autotune = AutotuneSettings()
+//    struct AutosenseSettings {
+        public var lastAutosense : Date = .distantPast
+        public let autosenseInterval = TimeInterval(minutes: 1)
+        public let autosenseLookbackInterval = TimeInterval(hours: 4)
+        public var autosenseFactor : Double = 1.0
+        public var autosenseEnabled : Bool = true
+        public var autosenseSuspended : Date? = nil
+        public let autosenseSuspendInterval = TimeInterval(hours: 6)
+//    }
 
-    public var autosenseFactor : Double = 1.0
-    public var autotuneCarbFactor : Double = 1.0
-    public var autotuneSensitivityFactor : Double = 1.0
-    public var autotuneBasalHourlyFactor : [Double] = []
+//    struct AutotuneSettings {
+        public var lastAutotune : Date = .distantPast
+        public let autotuneInterval = TimeInterval(hours: 24)
+        public let autotuneLookbackInterval = TimeInterval(hours: 7 * 24)
+        public var autotuneCarbFactor : Double = 1.0
+        public var autotuneSensitivityFactor : Double = 1.0
+        public var autotuneBasalHourlyFactor : [Double] = []
+        public var autotuneEnabled : Bool = false
+//    }
 
     // MARK - Display settings
 

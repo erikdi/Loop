@@ -267,6 +267,7 @@ final class LoopDataManager {
         didSet {
             carbEffect = nil
             carbsOnBoard = nil
+
         }
     }
 
@@ -731,6 +732,12 @@ extension LoopDataManager {
             do {
                 try self.update()
 
+//                NSLog("loop - before AutoAdjust")
+//                let autoAdjust = AutoAdjust(manager: self)
+//                autoAdjust.autoSense()
+//                autoAdjust.autoTune()
+//                NSLog("loop - after AutoAdjust")
+
                 if self.settings.dosingEnabled && self.isAutomaticDosingAllowed() {
                     self.enactDose { (error) -> Void in
                         self.lastLoopError = error
@@ -888,11 +895,9 @@ extension LoopDataManager {
 
         if nextEffectDate < lastGlucoseDate, let insulinEffect = insulinEffect {
             updateGroup.enter()
-            self.logger.debug("Fetching counteraction effects after \(nextEffectDate)")
             glucoseStore.getCounteractionEffects(start: nextEffectDate, to: insulinEffect) { (velocities) in
                 self.insulinCounteractionEffects.append(contentsOf: velocities)
                 self.insulinCounteractionEffects = self.insulinCounteractionEffects.filterDateRange(earliestEffectDate, nil)
-
                 updateGroup.leave()
             }
 
@@ -914,7 +919,6 @@ extension LoopDataManager {
                     self.carbEffect = effects
                     self.recentCarbEntries = samples
                 }
-
                 updateGroup.leave()
             }
         }

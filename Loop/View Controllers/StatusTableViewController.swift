@@ -1032,7 +1032,12 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
                     case .preset(let preset):
                         cell.titleLabel.text = String(format: NSLocalizedString("%@ %@", comment: "The format for an active override preset. (1: preset symbol)(2: preset name)"), preset.symbol, preset.name)
                     case .custom:
-                        cell.titleLabel.text = NSLocalizedString("Custom Override", comment: "The title of the cell indicating a generic temporary override is enabled")
+                        switch override.enactTrigger {
+                        case .autosense:
+                            cell.titleLabel.text = NSLocalizedString("Autosense", comment: "The title of the cell indicating a autosense temporary override is enabled")
+                        default:
+                            cell.titleLabel.text = NSLocalizedString("Custom Override", comment: "The title of the cell indicating a generic temporary override is enabled")
+                        }
                     }
 
                     if override.isActive() {
@@ -2001,6 +2006,9 @@ extension StatusTableViewController: AddEditOverrideTableViewControllerDelegate 
     }
 
     func addEditOverrideTableViewController(_ vc: AddEditOverrideTableViewController, didCancelOverride override: TemporaryScheduleOverride) {
+        if deviceManager.loopManager.settings.scheduleOverride?.enactTrigger == .autosense {
+            deviceManager.loopManager.settings.autosenseSuspended = Date()
+        }
         deviceManager.loopManager.settings.scheduleOverride = nil
     }
 }

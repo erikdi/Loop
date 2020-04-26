@@ -266,7 +266,9 @@
 		43FCEEBE22220CE70013DD30 /* LoopKitUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 437AFEE6203688CF008C4892 /* LoopKitUI.framework */; };
 		43FCEEBF22220CF30013DD30 /* LoopKitUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 437AFEE6203688CF008C4892 /* LoopKitUI.framework */; };
 		43FCEEC022220D1F0013DD30 /* LoopKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43F78D4B1C914197002152D1 /* LoopKit.framework */; };
+		49505140244FA61A00EC429D /* Autotune.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4950513F244FA61A00EC429D /* Autotune.swift */; };
 		4952870924479D8300B5B476 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4952870824479D8300B5B476 /* String.swift */; };
+		49528712244CDA9400B5B476 /* Autosense.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49528711244CDA9400B5B476 /* Autosense.swift */; };
 		498E588724434115006310D6 /* FoodManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498E588624434115006310D6 /* FoodManager.swift */; };
 		498E588A24434130006310D6 /* FoodPickerCameraViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498E588824434130006310D6 /* FoodPickerCameraViewController.swift */; };
 		498E588B24434130006310D6 /* FoodPickerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498E588924434130006310D6 /* FoodPickerViewController.swift */; };
@@ -797,7 +799,9 @@
 		43FCEEB8221BCF790013DD30 /* GlucoseChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseChart.swift; sourceTree = "<group>"; };
 		43FCEEBA22211C860013DD30 /* CarbEffectChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarbEffectChart.swift; sourceTree = "<group>"; };
 		43FCEEBC22212DD50013DD30 /* PredictedGlucoseChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictedGlucoseChart.swift; sourceTree = "<group>"; };
+		4950513F244FA61A00EC429D /* Autotune.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Autotune.swift; sourceTree = "<group>"; };
 		4952870824479D8300B5B476 /* String.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
+		49528711244CDA9400B5B476 /* Autosense.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Autosense.swift; sourceTree = "<group>"; };
 		498E588624434115006310D6 /* FoodManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FoodManager.swift; sourceTree = "<group>"; };
 		498E588824434130006310D6 /* FoodPickerCameraViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FoodPickerCameraViewController.swift; sourceTree = "<group>"; };
 		498E588924434130006310D6 /* FoodPickerViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FoodPickerViewController.swift; sourceTree = "<group>"; };
@@ -1678,6 +1682,8 @@
 			isa = PBXGroup;
 			children = (
 				439897361CD2F80600223065 /* AnalyticsManager.swift */,
+				49528711244CDA9400B5B476 /* Autosense.swift */,
+				4950513F244FA61A00EC429D /* Autotune.swift */,
 				439BED291E76093C00B0AED5 /* CGMManager.swift */,
 				43DBF0521C93EC8200B3C386 /* DeviceDataManager.swift */,
 				43F4EF1C1BA2A57600526CE1 /* DiagnosticLogger.swift */,
@@ -2732,6 +2738,7 @@
 				43DAD00020A2736F000F8529 /* PersistedPumpEvent.swift in Sources */,
 				498E588F24434146006310D6 /* FoodCollectionViewCell.swift in Sources */,
 				438849EC1D29EC34003B3F23 /* AmplitudeService.swift in Sources */,
+				49528712244CDA9400B5B476 /* Autosense.swift in Sources */,
 				43E93FB61E469A4000EAB8DB /* NumberFormatter.swift in Sources */,
 				C1FB428C217806A400FAB378 /* StateColorPalette.swift in Sources */,
 				4F08DE8F1E7BB871006741EA /* CollectionType+Loop.swift in Sources */,
@@ -2762,6 +2769,7 @@
 				43511CE221FD80E400566C63 /* RetrospectiveCorrection.swift in Sources */,
 				438D42F91D7C88BC003244B0 /* PredictionInputEffect.swift in Sources */,
 				892A5D692230C41D008961AB /* RangeReplaceableCollection.swift in Sources */,
+				49505140244FA61A00EC429D /* Autotune.swift in Sources */,
 				4F70C2101DE8FAC5006380B7 /* StatusExtensionDataManager.swift in Sources */,
 				43DFB62320D4CAE7008A7BAE /* PumpManager.swift in Sources */,
 				892A5D59222F0A27008961AB /* Debug.swift in Sources */,
