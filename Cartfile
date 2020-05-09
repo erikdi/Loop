@@ -1,3 +1,4 @@
+github "erikdi/MKRingProgressView" "master"
 github "erikdi/LoopKit" "dev"
 github "erikdi/CGMBLEKit" "dev"
 github "erikdi/SwiftCharts" == 0.6.5
