@@ -27,6 +27,8 @@ final class NightscoutDataManager {
 
     // Last time settings were updated
     var lastSettingsUpdate: Date = .distantPast
+
+    var lastRadioUpload: Date = .distantPast
     
     // Override history query anchor
     var overrideHistoryQueryAnchor: TemporaryScheduleOverrideHistory.QueryAnchor?
@@ -285,7 +287,7 @@ final class NightscoutDataManager {
         {
             
             let battery: BatteryStatus?
-            
+
             if let chargeRemaining = pumpManagerStatus.pumpBatteryChargeRemaining {
                 battery = BatteryStatus(percent: Int(round(chargeRemaining * 100)), voltage: nil, status: nil)
             } else {
@@ -317,6 +319,14 @@ final class NightscoutDataManager {
                 bolusing: bolusing,
                 reservoir: currentReservoirUnits,
                 secondsFromGMT: pumpManagerStatus.timeZone.secondsFromGMT())
+
+
+            if abs(self.lastRadioUpload.timeIntervalSinceNow) > .minutes(30) {
+                self.uploadLog(date: Date(), level: "Radio", note:
+                    String(describing: pumpManagerStatus.rileyLinkStatus))
+                self.lastRadioUpload = Date()
+            }
+
         } else {
             pumpStatus = nil
         }
