@@ -257,7 +257,11 @@ extension NotificationManager {
         } else {
             notification.sound = .default
         }
-
+        // let path = Bundle.main.path(forResource: "imperial_march.caf", ofType: nil)!
+        // let url = URL(fileURLWithPath: path)
+        let sound = UNNotificationSound.init(named: UNNotificationSoundName.init("imperial_march.caf"))
+        NSLog("Notification sound \(sound)")
+        notification.sound = sound
         let request = UNNotificationRequest(
             // Only support 1 low notification at once
             identifier: LoopNotificationCategory.glucoseLow.rawValue,
