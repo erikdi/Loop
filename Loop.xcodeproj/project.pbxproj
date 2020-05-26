@@ -279,6 +279,7 @@
 		498E589924435D44006310D6 /* NoteTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498E589824435D44006310D6 /* NoteTableViewController.swift */; };
 		498E589B2443647D006310D6 /* CarbEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498E589A2443647D006310D6 /* CarbEntry.swift */; };
 		498E589D24437B43006310D6 /* FoodCatalog in Resources */ = {isa = PBXBuildFile; fileRef = 498E589C24437B43006310D6 /* FoodCatalog */; };
+		49D9A291246831A0007C8567 /* imperial_march.caf in Resources */ = {isa = PBXBuildFile; fileRef = 49D9A290246831A0007C8567 /* imperial_march.caf */; };
 		4D3B40041D4A9E1A00BC6334 /* G4ShareSpy.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D3B40021D4A9DFE00BC6334 /* G4ShareSpy.framework */; };
 		4F08DE8F1E7BB871006741EA /* CollectionType+Loop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F08DE8E1E7BB871006741EA /* CollectionType+Loop.swift */; };
 		4F08DE9B1E7BC4ED006741EA /* SwiftCharts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4346D1EF1C781BEA00ABAFE3 /* SwiftCharts.framework */; };
@@ -812,6 +813,7 @@
 		498E589824435D44006310D6 /* NoteTableViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NoteTableViewController.swift; sourceTree = "<group>"; };
 		498E589A2443647D006310D6 /* CarbEntry.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarbEntry.swift; sourceTree = "<group>"; };
 		498E589C24437B43006310D6 /* FoodCatalog */ = {isa = PBXFileReference; lastKnownFileType = folder; path = FoodCatalog; sourceTree = "<group>"; };
+		49D9A290246831A0007C8567 /* imperial_march.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = imperial_march.caf; sourceTree = "<group>"; };
 		4D3B40021D4A9DFE00BC6334 /* G4ShareSpy.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = G4ShareSpy.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4F08DE7C1E7BB6E5006741EA /* ChartAxisValueDoubleLog.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChartAxisValueDoubleLog.swift; sourceTree = "<group>"; };
 		4F08DE7D1E7BB6E5006741EA /* ChartAxisValueDoubleUnit.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChartAxisValueDoubleUnit.swift; sourceTree = "<group>"; };
@@ -1371,6 +1373,7 @@
 		43776F8E1B8022E90074EA36 /* Loop */ = {
 			isa = PBXGroup;
 			children = (
+				49D9A290246831A0007C8567 /* imperial_march.caf */,
 				498E589C24437B43006310D6 /* FoodCatalog */,
 				C16DA84022E8E104008624C2 /* Plugins */,
 				7D7076651FE06EE4004AC8EA /* Localizable.strings */,
@@ -2339,6 +2342,7 @@
 			files = (
 				C13255D6223E7BE2008AF50C /* BolusProgressTableViewCell.xib in Resources */,
 				43FCBBC21E51710B00343C1B /* LaunchScreen.storyboard in Resources */,
+				49D9A291246831A0007C8567 /* imperial_march.caf in Resources */,
 				7D70764F1FE06EE1004AC8EA /* InfoPlist.strings in Resources */,
 				C1A3EED2235233E1007672E3 /* DerivedAssets.xcassets in Resources */,
 				7D7076631FE06EE4004AC8EA /* Localizable.strings in Resources */,

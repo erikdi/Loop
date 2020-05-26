@@ -91,6 +91,7 @@ public struct LoopSettings: Equatable {
     public var lastAutomaticBolus : Date = .distantPast
     public var lastCarbChange : Date = .distantPast
 
+    public var lowNotificationThreshold : HKQuantity = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: 200)
 //    public var autosense = AutosenseSettings()
 //    public var autotune = AutotuneSettings()
 //    struct AutosenseSettings {

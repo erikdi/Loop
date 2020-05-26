@@ -7,8 +7,8 @@
 
 import Foundation
 
-extension AutoAdjust {
-    func autoTune() {
+class AutoTune : AutoAdjust {
+    func run() {
         if abs(manager.settings.lastAutotune.timeIntervalSinceNow) < manager.settings.autotuneInterval {
             NSLog("Autotune - last invocation too close \(manager.settings.lastAutotune)")
             return

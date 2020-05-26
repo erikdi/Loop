@@ -732,18 +732,11 @@ extension LoopDataManager {
             do {
                 try self.update()
 
-//                NSLog("loop - before AutoAdjust")
-//                let autoAdjust = AutoAdjust(manager: self)
-//                autoAdjust.autoSense()
-//                autoAdjust.autoTune()
-//                NSLog("loop - after AutoAdjust")
-
                 if self.settings.dosingEnabled && self.isAutomaticDosingAllowed() {
                     self.enactDose { (error) -> Void in
                         self.lastLoopError = error
                         if let error = error {
-                            AnalyticsManager.shared.loopDidError(error, trigger: trigger, retries: retries, uuid: uuidString)
-                            if retries < 5 {
+                            if retries < 4 {
                                 let delay = 20 * (retries + 1)
                                 self.loopRetryQueue.asyncAfter(deadline: .now() + DispatchTimeInterval.seconds(delay)) {
                                     self.loop(trigger: trigger, retries: retries + 1, uuid: uuidString)
@@ -751,14 +744,14 @@ extension LoopDataManager {
                             } else {
                                 self.loopInProgress = nil
                             }
+                            AnalyticsManager.shared.loopDidError(
+                                error, trigger: trigger, retries: retries, uuid: uuidString)
                         } else {
                             self.loopDidComplete(date: Date(), duration: -startDate.timeIntervalSinceNow, trigger: trigger, retries: retries, uuid: uuidString)
                             self.loopInProgress = nil
                         }
-                        self.logger.default("Loop ended - \(uuidString)")
                         self.notify(forChange: .tempBasal)
                     }
-
                     // Delay the notification until we know the result of the temp basal
                     return
                 } else {
@@ -767,12 +760,20 @@ extension LoopDataManager {
             } catch let error {
                 self.lastLoopError = error
                 AnalyticsManager.shared.loopDidError(error, trigger: trigger, retries: retries, uuid: uuidString)
-                self.logger.default("Loop error  - \(uuidString) - \(error)")
             }
 
             self.loopInProgress = nil
-            self.logger.default("Loop ended - \(uuidString)")
             self.notify(forChange: .tempBasal)
+
+            // This gets run pretty rarely
+            self.logger.debug("before AutoAdjust")
+            let autoSense = AutoSense(manager: self)
+            autoSense.run()
+            let autoTune = AutoTune(manager: self)
+            autoTune.run()
+            let stats = StatisticManager(manager: self)
+            stats.run()
+            self.logger.debug("after AutoAdjust")
         }
     }
 
@@ -1458,6 +1459,7 @@ extension LoopDataManager {
                 maxAutomaticBolus: safeMaxBolus * settings.bolusPartialApplicationFactor,
                 partialApplicationFactor: settings.bolusPartialApplicationFactor,
                 lastTempBasal: lastTempBasal,
+                carbsOnBoard : carbsOnBoard?.quantity.doubleValue(for: .gram()) ?? 0,
                 volumeRounder: volumeRounder,
                 rateRounder: rateRounder,
                 isBasalRateScheduleOverrideActive: settings.scheduleOverride?.isBasalRateScheduleOverriden(at: startDate) == true
@@ -1515,13 +1517,25 @@ extension LoopDataManager {
     }
 
     private func maybeSendFutureLowNotification() {
+        dispatchPrecondition(condition: .onQueue(dataAccessQueue))
         guard let manualBolus = recommendedManualBolus else {
+            return
+        }
+        guard let currentGlucose = predictedGlucose?.first?.quantity else {
+            return
+        }
+        // TODO the value should be dependent on the distance to the low event
+        guard currentGlucose < settings.lowNotificationThreshold else {
+            return
+        }
+        // HACK carbs is sometimes miscalculated to a very very large number, just ignore for now
+        guard manualBolus.recommendation.carbs < 100000 else {
             return
         }
         // TODO: check current glucose before sounding alarm
         if manualBolus.recommendation.carbs > 0 {
             if let lastLow = lastLowNotification {
-                if lastLow.date.timeIntervalSinceNow > TimeInterval(minutes: -5) {
+                if lastLow.date.timeIntervalSinceNow > TimeInterval(minutes: -15) {
                     // recently sent
                 } else {
                     NotificationManager.sendGlucoseFutureLowNotifications(at: manualBolus.date, carbs: manualBolus.recommendation.carbs)

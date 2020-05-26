@@ -10,7 +10,86 @@ import LoopCore
 import LoopKit
 import HealthKit
 
+enum AdjustEvents {
+    case inRange
+    case belowRange
+    case aboveRange
+    case belowRangeAfterCarbs
+    case aboveRangeAfterCarbs
+    case belowRangeAfterCorrectionNoCarbs
+    case aboveRangeAfterCorrectionNoCarbs
+}
 
+
+
+extension Date {
+    func currentHour() -> Int {
+        return Calendar.current.component(.hour, from: self)
+    }
+    func currentWeekday() -> Int {
+        return Calendar.current.component(.weekday, from: self)
+    }
+    func previousHourEnd() -> Date {
+            return Date(timeIntervalSinceReferenceDate:
+                (timeIntervalSinceReferenceDate / 3600.0).rounded(.down) * 3600.0 - 1.0)
+    }
+    func previousHourStart() -> Date {
+            return Date(timeIntervalSinceReferenceDate:
+                (timeIntervalSinceReferenceDate / 3600.0).rounded(.down) * 3600.0 - 3600.0)
+    }
+}
+
+enum TreatmentStatsKeys : String {
+    case totalGlucose
+    case numGlucose
+    case totalCarbs
+    case numCarbs
+}
+typealias TreatmentStats = [String: [String: Double]]
+class StatisticManager : AutoAdjust {
+    var lastRecordedHour : Int {
+        get {
+            return UserDefaults.standard.integer(forKey: "lastRecordedHour")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "lastRecordedHour")
+        }
+    }
+
+    func run() {
+        let now = Date()
+        let hour = now.currentHour()
+        guard lastRecordedHour != hour else {
+            return
+        }
+        let startDate = now.previousHourStart()
+        let endDate = now.previousHourEnd()
+        logger.debug("Record statistics from \(startDate) until \(endDate)")
+
+        fetchSync(startDate: startDate, endDate: endDate)
+
+        var hourStats : [String: Double] = [:]
+
+        if let samples = self.glucoseSamples {
+            let sum = samples.reduce(0) { $0 + $1.quantity.doubleValue(for: glucoseUnit) }
+            hourStats[TreatmentStatsKeys.totalGlucose.rawValue] = sum
+            hourStats[TreatmentStatsKeys.numGlucose.rawValue] = Double(samples.count)
+        }
+        if let samples = self.carbSamples {
+            let sum = samples.reduce(0) { $0 + $1.quantity.doubleValue(for: .gram()) }
+            hourStats[TreatmentStatsKeys.totalCarbs.rawValue] = sum
+            hourStats[TreatmentStatsKeys.numCarbs.rawValue] = Double(samples.count)
+        }
+        logger.debug("Hourly statistics \(hourStats)")
+        for entry in self.doseEntries ?? [] {
+            logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.type), \(entry.programmedUnits)")
+        }
+        for entry in self.cobValues ?? [] {
+           logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.quantity.doubleValue(for: .gram()))")
+        }
+        // lastRecordedHour = hour
+    }
+}
 
 class AutoAdjust {
 
@@ -23,17 +102,22 @@ class AutoAdjust {
     var glucoseSamples : [StoredGlucoseSample]? = nil
     let glucoseUnit = HKUnit.milligramsPerDeciliter
     var retrospectiveGlucoseDiscrepancies : [GlucoseValue]? = nil
+    var doseEntries : [DoseEntry]? = nil
 
     var manager : LoopDataManager
     var logger : CategoryLogger
 
     init(manager: LoopDataManager) {
         self.manager = manager
-        self.logger = DiagnosticLogger.shared.forCategory("AutoAdjust")
-
+        let className = NSStringFromClass(type(of: self))
+        self.logger = DiagnosticLogger.shared.forCategory(className)
     }
 
     func logDebug() {
+        logger.debug("doseEntries")
+        for entry in self.doseEntries ?? [] {
+            logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.type), \(entry.programmedUnits)")
+        }
         logger.debug("insulinEffect")
         for entry in self.insulinEffect ?? [] {
             logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.quantity.doubleValue(for: glucoseUnit))")
@@ -43,6 +127,15 @@ class AutoAdjust {
             let perInterval = entry.endDate.timeIntervalSince(entry.startDate) * entry.quantity.doubleValue(for: GlucoseEffectVelocity.unit)
             logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.quantity.doubleValue(for: GlucoseEffectVelocity.unit)), \(perInterval)")
         }
+        logger.debug("iobValues")
+        for entry in self.iobValues ?? [] {
+            logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.value)")
+        }
+
+        logger.debug("carbSamples")
+        for entry in self.carbSamples ?? [] {
+            logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.quantity.doubleValue(for: .gram()))")
+        }
         logger.debug("cobValues")
          for entry in self.cobValues ?? [] {
             logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.quantity.doubleValue(for: .gram()))")
@@ -51,19 +144,16 @@ class AutoAdjust {
         for entry in self.carbEffect ?? [] {
             logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.quantity.doubleValue(for: glucoseUnit))")
         }
-        logger.debug("iobValues")
-        for entry in self.iobValues ?? [] {
-            logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.value)")
-        }
+
         logger.debug("glucoseSamples")
         for entry in self.glucoseSamples ?? [] {
             logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.quantity.doubleValue(for: glucoseUnit))")
         }
+
         logger.debug("retrospectiveGlucoseDiscrepancies")
         for entry in self.retrospectiveGlucoseDiscrepancies ?? [] {
             logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.quantity.doubleValue(for: glucoseUnit))")
         }
-
     }
 
     func fetchSync(startDate: Date, endDate: Date) {
@@ -126,6 +216,19 @@ class AutoAdjust {
                 self.iobValues = values
             case .failure(let error):
                 self.logger.error("Could not fetch insulin on board: \(error)")
+                self.iobValues = []
+            }
+            updateGroup.leave()
+        }
+
+        updateGroup.enter()
+        manager.doseStore.getNormalizedDoseEntries(start: startDate, end: endDate) { (result) in
+            switch result {
+            case .success(let values):
+                self.doseEntries = values
+            case .failure(let error):
+                self.logger.error("Could not fetch doseEntries: \(error)")
+                self.doseEntries = nil
             }
             updateGroup.leave()
         }
@@ -143,12 +246,14 @@ class AutoAdjust {
     }
 }
 
-extension AutoAdjust {
-    func autoSense() {
-            if abs(manager.settings.lastAutosense.timeIntervalSinceNow) < manager.settings.autosenseInterval {
-                NSLog("Autosense - last invocation too close \(manager.settings.lastAutosense)")
-                return
-            }
+class AutoSense : AutoAdjust {
+    func run() {
+        /*
+        if abs(manager.settings.lastAutosense.timeIntervalSinceNow) < manager.settings.autosenseInterval {
+            NSLog("Autosense - last invocation too close \(manager.settings.lastAutosense)")
+            return
+        }
+        */
         let startDate = Date(timeIntervalSinceNow: -manager.settings.autosenseLookbackInterval)
         let endDate = Date()
         logger.default("Autosense running on data from \(startDate) until \(endDate)")

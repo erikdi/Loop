@@ -198,8 +198,12 @@ final class DeviceDataManager {
             
             pumpManager?.assertCurrentPumpData()
         case .error(let error):
-            log.default("CGMManager:\(type(of: manager)) did update with error: \(error)")
-            
+            let e = String(describing: error)
+            if e.contains("latestGlucoseValueTooRecent") {
+                log.default("CGMManager:\(type(of: manager)) did update with error: \(error)")
+            } else {
+                log.error("CGMManager:\(type(of: manager)) did update with error: \(error)")
+            }
             self.setLastError(error: error)
             log.default("Asserting current pump data")
             pumpManager?.assertCurrentPumpData()
