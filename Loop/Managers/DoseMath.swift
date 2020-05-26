@@ -448,6 +448,7 @@ extension Collection where Element: GlucoseValue {
         maxAutomaticBolus: Double,
         partialApplicationFactor: Double,
         lastTempBasal: DoseEntry?,
+        carbsOnBoard : Double = 0,
         volumeRounder: ((Double) -> Double)? = nil,
         rateRounder: ((Double) -> Double)? = nil,
         isBasalRateScheduleOverrideActive: Bool = false,
@@ -488,14 +489,17 @@ extension Collection where Element: GlucoseValue {
             scheduledBasalRateMatchesPump: !isBasalRateScheduleOverrideActive
         )
         
-        let bolusUnitsUnrounded = correction.asBolus(
+        var bolusUnitsUnrounded = correction.asBolus(
             partialApplicationFactor: partialApplicationFactor,
             maxBolusUnits: maxAutomaticBolus,
             volumeRounder: volumeRounder
         )
+        
+        // Add a bit more insulin which we can correct in the next hour.
+        if carbsOnBoard > 10 && bolusUnitsUnrounded > 0.1 {
+            bolusUnitsUnrounded += scheduledBasalRate
+        }
         // Round to 0.1 - it is okay to round up as we can correct with temp basal.
-        // TODO add a more aggressive mode that if carbs are entered it can "pre-bolus"
-        //      the hourly basal rate.
         let bolusUnits = round(bolusUnitsUnrounded * 10)/10
 
         if temp != nil || bolusUnits > 0 {
