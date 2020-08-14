@@ -16,7 +16,7 @@ class AutoTune : AutoAdjust {
         let startDate = Date(timeIntervalSinceNow: -manager.settings.autotuneLookbackInterval)
         let endDate = Date()
         logger.default("Autotune - running on data from \(startDate) until \(endDate)")
-        logger.error("Autotune - not implemented")
+        logger.default("Autotune - not implemented")
         //manager.settings.lastAutotune = Date()
     }
 }

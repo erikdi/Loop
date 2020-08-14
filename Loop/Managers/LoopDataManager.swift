@@ -717,8 +717,7 @@ extension LoopDataManager {
         let uuidString: String = uuid ?? UUID().uuidString
         self.dataAccessQueue.async {
             if let progress = self.loopInProgress, progress.uuid != uuidString {
-                // TODO make this default only
-                self.logger.error("Loop already in progress - \(progress.uuid) - Trigger \(trigger) - Try \(retries)")
+                self.logger.default("Loop already in progress - \(progress.uuid) - Trigger \(trigger) - Try \(retries)")
                 return
             }
             let date = self.loopInProgress?.date ?? Date()
@@ -764,16 +763,17 @@ extension LoopDataManager {
 
             self.loopInProgress = nil
             self.notify(forChange: .tempBasal)
-
-            // This gets run pretty rarely
-            self.logger.debug("before AutoAdjust")
-            let autoSense = AutoSense(manager: self)
-            autoSense.run()
-            let autoTune = AutoTune(manager: self)
-            autoTune.run()
-            let stats = StatisticManager(manager: self)
-            stats.run()
-            self.logger.debug("after AutoAdjust")
+            if self.lastLoopError != nil {
+                // This gets run pretty rarely
+                self.logger.debug("before AutoAdjust")
+                let autoSense = AutoSense(manager: self)
+                autoSense.run()
+                let autoTune = AutoTune(manager: self)
+                autoTune.run()
+                let stats = StatisticManager(manager: self)
+                stats.run()
+                self.logger.debug("after AutoAdjust")
+            }
         }
     }
 

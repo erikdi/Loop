@@ -179,7 +179,7 @@ final class AnalyticsManager: IdentifiableClass {
     }
 
     func didFetchNewCGMData() {
-        logEvent("CGM Fetch", outOfSession: true)
+        // logEvent("CGM Fetch", outOfSession: true)
     }
 
     func loopDidSucceed(_ duration: TimeInterval, trigger: String, retries: Int, uuid: String) {

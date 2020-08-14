@@ -248,12 +248,10 @@ class AutoAdjust {
 
 class AutoSense : AutoAdjust {
     func run() {
-        /*
         if abs(manager.settings.lastAutosense.timeIntervalSinceNow) < manager.settings.autosenseInterval {
-            NSLog("Autosense - last invocation too close \(manager.settings.lastAutosense)")
+            logger.default("Autosense - last invocation too close \(manager.settings.lastAutosense)")
             return
         }
-        */
         let startDate = Date(timeIntervalSinceNow: -manager.settings.autosenseLookbackInterval)
         let endDate = Date()
         logger.default("Autosense running on data from \(startDate) until \(endDate)")
