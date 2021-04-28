@@ -17,7 +17,7 @@
                BlueprintIdentifier = "43A943711B926B7B0051FA24"
                BuildableName = "WatchApp.app"
                BlueprintName = "WatchApp"
-               ReferencedContainer = "container:Loop.xcodeproj">
+               ReferencedContainer = "container:../../../../LocalDevelopment/LoopWorkspace/Loop/Loop.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -31,7 +31,7 @@
                BlueprintIdentifier = "43776F8B1B8022E90074EA36"
                BuildableName = "Loop.app"
                BlueprintName = "Loop"
-               ReferencedContainer = "container:Loop.xcodeproj">
+               ReferencedContainer = "container:../../../../LocalDevelopment/LoopWorkspace/Loop/Loop.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -45,7 +45,7 @@
                BlueprintIdentifier = "43A9437D1B926B7B0051FA24"
                BuildableName = "WatchApp Extension.appex"
                BlueprintName = "WatchApp Extension"
-               ReferencedContainer = "container:Loop.xcodeproj">
+               ReferencedContainer = "container:../../../../LocalDevelopment/LoopWorkspace/Loop/Loop.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -61,7 +61,7 @@
             BlueprintIdentifier = "43A943711B926B7B0051FA24"
             BuildableName = "WatchApp.app"
             BlueprintName = "WatchApp"
-            ReferencedContainer = "container:Loop.xcodeproj">
+            ReferencedContainer = "container:../../../../LocalDevelopment/LoopWorkspace/Loop/Loop.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -72,7 +72,7 @@
                BlueprintIdentifier = "43E2D90A1D20C581004DA55F"
                BuildableName = "LoopTests.xctest"
                BlueprintName = "LoopTests"
-               ReferencedContainer = "container:Loop.xcodeproj">
+               ReferencedContainer = "container:../../../../LocalDevelopment/LoopWorkspace/Loop/Loop.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -90,14 +90,14 @@
       launchAutomaticallySubstyle = "32">
       <RemoteRunnable
          runnableDebuggingMode = "2"
-         BundleIdentifier = "com.apple.carousel"
-         RemotePath = "/Naterade">
+         BundleIdentifier = "com.apple.Carousel"
+         RemotePath = "/$(MAIN_APP_DISPLAY_NAME)">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "43A943711B926B7B0051FA24"
             BuildableName = "WatchApp.app"
             BlueprintName = "WatchApp"
-            ReferencedContainer = "container:Loop.xcodeproj">
+            ReferencedContainer = "container:../../../../LocalDevelopment/LoopWorkspace/Loop/Loop.xcodeproj">
          </BuildableReference>
       </RemoteRunnable>
    </LaunchAction>
@@ -110,14 +110,14 @@
       launchAutomaticallySubstyle = "32">
       <RemoteRunnable
          runnableDebuggingMode = "2"
-         BundleIdentifier = "com.apple.carousel"
-         RemotePath = "/Naterade">
+         BundleIdentifier = "com.apple.Carousel"
+         RemotePath = "/$(MAIN_APP_DISPLAY_NAME)">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "43A943711B926B7B0051FA24"
             BuildableName = "WatchApp.app"
             BlueprintName = "WatchApp"
-            ReferencedContainer = "container:Loop.xcodeproj">
+            ReferencedContainer = "container:../../../../LocalDevelopment/LoopWorkspace/Loop/Loop.xcodeproj">
          </BuildableReference>
       </RemoteRunnable>
       <MacroExpansion>
@@ -126,7 +126,7 @@
             BlueprintIdentifier = "43A943711B926B7B0051FA24"
             BuildableName = "WatchApp.app"
             BlueprintName = "WatchApp"
-            ReferencedContainer = "container:Loop.xcodeproj">
+            ReferencedContainer = "container:../../../../LocalDevelopment/LoopWorkspace/Loop/Loop.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>
