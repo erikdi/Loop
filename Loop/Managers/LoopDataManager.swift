@@ -1403,7 +1403,7 @@ extension LoopDataManager {
         self.predictedGlucose = predictedGlucose
         let predictedGlucoseIncludingPendingInsulin = try predictGlucose(using: settings.enabledEffects, includingPendingInsulin: true)
         self.predictedGlucoseIncludingPendingInsulin = predictedGlucoseIncludingPendingInsulin
-
+        self.logger.debug("Predicted Glucose \(predictedGlucose.last), including pending \(predictedGlucoseIncludingPendingInsulin.last)")
         guard
             let maxBasal = settings.maximumBasalRatePerHour,
             let glucoseTargetRange = settings.glucoseTargetRangeScheduleApplyingOverrideIfActive,

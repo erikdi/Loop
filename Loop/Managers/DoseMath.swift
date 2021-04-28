@@ -497,7 +497,7 @@ extension Collection where Element: GlucoseValue {
         
         // Add a bit more insulin which we can correct in the next hour.
         if carbsOnBoard > 10 && bolusUnitsUnrounded > 0.1 {
-            bolusUnitsUnrounded += scheduledBasalRate
+            bolusUnitsUnrounded += (scheduledBasalRate * 0.5)
         }
         // Round to 0.1 - it is okay to round up as we can correct with temp basal.
         let bolusUnits = round(bolusUnitsUnrounded * 10)/10

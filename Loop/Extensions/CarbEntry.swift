@@ -13,7 +13,7 @@ extension NewCarbEntry {
     func foodPicks() -> FoodPicks {
         var picks = FoodPicks()
 
-        if  let foodType = self.foodType {
+        if  let foodType = self.foodType, foodType.count > 1 {
             picks = FoodPicks(fromJSON: foodType)
         }
         if picks.last == nil {

@@ -230,12 +230,12 @@ struct FoodPicks {
     
     init(fromJSON: String) {
         do {
-            let json = try JSONSerialization.jsonObject(with: fromJSON.data(using: .utf8)!, options: JSONSerialization.ReadingOptions())
+            let json = try JSONSerialization.jsonObject(with: fromJSON.data(using: .utf8)!, options: .allowFragments )
             for rawValue in json as! [Any] {
                 picks.append(FoodPick(rawValues: rawValue as! [String : Any]))
             }
         } catch let error {
-            NSLog("FoodPicks fromJSON error \(error)")
+            NSLog("FoodPicks fromJSON ('\(fromJSON)') error \(error)")
         }
 
     }
