@@ -48,6 +48,6 @@ done
 PROJECTVERSION=$(sed -n -E "s/CURRENT_PROJECT_VERSION = ([0-9]+);/\1 + 1/p" Loop.xcodeproj/project.pbxproj | head -n1 | bc)
 echo "New project version $PROJECTVERSION"
 sed -E -i "" "s/(CURRENT_PROJECT|DYLIB_CURRENT)(_VERSION =)( +[0-9]+)/\1\2 $PROJECTVERSION/" Loop.xcodeproj/project.pbxproj
-git add Loop.xcodeproj/project.pbxproj
-git commit -m "Update to version $PROJECTVERSION"
-git tag "v$NEWVERSION.$PROJECTVERSION"
+echo git add Loop.xcodeproj/project.pbxproj
+echo git commit -m "Update to version $PROJECTVERSION"
+echo git tag "v$NEWVERSION.$PROJECTVERSION"
