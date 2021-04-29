@@ -10,10 +10,10 @@ NEWVERSION="$2"
 
 if [ "$NEWVERSION" == "" ]; then
    NEWVERSION="$OLDVERSION"
-   OLDVERSION=$(egrep -o '\d+\.\d+\.\d+' Loop.xcconfig)
+   OLDVERSION=$(egrep -o '1\.9\.4\.\d+' Loop/Info.plist)
    echo "Automatically set old version $OLDVERSION"
    if [ "$NEWVERSION" == "" ]; then
-	NEWVERSION=$OLDVERSION.$(date +%Y%m%d)
+	NEWVERSION=1.9.4.$(date +%Y%m%d)
 	echo "Automatically set new version $NEWVERSION"
    fi
 fi
@@ -39,9 +39,9 @@ case "$OLDVERSION" in
         echo "old version is ok, but non-standard"
 esac
 
-for f in "Loop.xcconfig"; do
+for f in "Loop/Info.plist" "LoopUI/Info.plist" "WatchApp Extension/Info.plist" "WatchApp/Info.plist" "DoseMathTests/Info.plist" "LoopTests/Info.plist" "Loop Status Extension/Info.plist" ; do
 
-	sed -i "" "s/LOOP_MARKETING_VERSION = .*/LOOP_MARKETING_VERSION = $NEWVERSION/" "$f"
+	sed -i "" "s/>$OLDVERSION</>$NEWVERSION</" "$f"
 	git add "$f"
 done
 
@@ -49,5 +49,5 @@ PROJECTVERSION=$(sed -n -E "s/CURRENT_PROJECT_VERSION = ([0-9]+);/\1 + 1/p" Loop
 echo "New project version $PROJECTVERSION"
 sed -E -i "" "s/(CURRENT_PROJECT|DYLIB_CURRENT)(_VERSION =)( +[0-9]+)/\1\2 $PROJECTVERSION/" Loop.xcodeproj/project.pbxproj
 git add Loop.xcodeproj/project.pbxproj
-git commit -m "Update to version v$NEWVERSION.$PROJECTVERSION"
+git commit -m "Update to version $PROJECTVERSION"
 git tag "v$NEWVERSION.$PROJECTVERSION"
