@@ -88,6 +88,7 @@ class StatisticManager : AutoAdjust {
            logger.debug("* \(entry.startDate), \(entry.endDate), \(entry.quantity.doubleValue(for: .gram()))")
         }
         // lastRecordedHour = hour
+        AnalyticsManager.shared.didStats("Done \(hourStats)")
     }
 }
 
@@ -343,7 +344,7 @@ class AutoSense : AutoAdjust {
         autosenseFactor = Swift.max(Swift.min(autosenseFactor, highestFactor), lowestFactor)
         let roundedAutosenseFactor = round(autosenseFactor * 10) / 10
 
-        logger.error(
+        AnalyticsManager.shared.didAutoSense(
             "Autosense analyzedInterval \(analyzedInterval) " +
             "#\(dataPoints) " +
             "high \(cumulativeTimeHigh) / \(highRatio), low \(cumulativeTimeLow) / \(lowRatio), " +

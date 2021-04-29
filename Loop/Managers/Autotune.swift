@@ -17,6 +17,7 @@ class AutoTune : AutoAdjust {
         let endDate = Date()
         logger.default("Autotune - running on data from \(startDate) until \(endDate)")
         logger.default("Autotune - not implemented")
+        AnalyticsManager.shared.didAutoTune("not implemented")
         //manager.settings.lastAutotune = Date()
     }
 }

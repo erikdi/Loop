@@ -204,4 +204,19 @@ extension AnalyticsManager {
     func didToggleBluetooth(_ reason: String) {
         logEvent("didToggleBluetooth \(reason)")
     }
+    func loopInProgress(_ reason: String) {
+        logEvent("loopInProgress \(reason)")
+    }
+    func loopStarted(_ reason: String) {
+        logEvent("loopStarted \(reason)")
+    }
+    func didAutoSense(_ reason: String) {
+        logEvent("didAutoSense \(reason)")
+    }
+    func didAutoTune(_ reason: String) {
+        logEvent("didAutoTune \(reason)")
+    }
+    func didStats(_ reason: String) {
+        logEvent("didStats \(reason)")
+    }
 }

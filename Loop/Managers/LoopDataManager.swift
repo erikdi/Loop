@@ -715,18 +715,21 @@ extension LoopDataManager {
     /// temporary basal rate.
     func loop(trigger: String, retries: Int = 0, uuid: String? = nil) {
         let uuidString: String = uuid ?? UUID().uuidString
+        NSLog("loop.loop \(uuidString)")
         self.dataAccessQueue.async {
             if let progress = self.loopInProgress, progress.uuid != uuidString {
                 self.logger.default("Loop already in progress - \(progress.uuid) - Trigger \(trigger) - Try \(retries)")
+                AnalyticsManager.shared.loopInProgress("\(progress.uuid) - Started \(progress.date) - Trigger \(trigger) - Try \(retries)")
                 return
             }
             let date = self.loopInProgress?.date ?? Date()
             self.loopInProgress = (date: date, uuid: uuidString, retry: retries, trigger: trigger)
             self.logger.default("Loop running - \(uuidString) - Trigger \(trigger) - Try \(retries)")
+            AnalyticsManager.shared.loopStarted("\(uuidString) \(date) - Trigger \(trigger) - Try \(retries)")
             NotificationCenter.default.post(name: .LoopRunning, object: self)
 
             self.lastLoopError = nil
-            let startDate = Date()
+            let startDate = date
 
             do {
                 try self.update()

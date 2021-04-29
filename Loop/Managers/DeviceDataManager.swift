@@ -244,33 +244,41 @@ final class DeviceDataManager {
             return
         }
         self.btMagicDate = Date()
-        AnalyticsManager.shared.didToggleBluetooth("\(source) - Reason \(reason) - Restarting Bluetooth, no data for 30 minutes (could also be out of range)")
+        AnalyticsManager.shared.didToggleBluetooth("\(source) - Reason \(reason) - Restarting, no data for \(self.btMagicDate.timeIntervalSinceNow) (could also be out of range)")
 
         if reason == "pump" {
             AnalyticsManager.shared.didToggleBluetooth("pump re-setup")
-            if let pumpManagerRawValue = UserDefaults.appGroup?.pumpManagerRawValue {
-                self.pumpManager = self.pumpManagerFromRawValue(pumpManagerRawValue)
+            DispatchQueue.main.async {
+
+                if let pumpManagerRawValue = UserDefaults.appGroup?.pumpManagerRawValue {
+                    self.pumpManager = self.pumpManagerFromRawValue(pumpManagerRawValue)
+                }
+
+                self.setupPump()
             }
-            self.setupPump()
         }
         else if reason == "cgm" {
             AnalyticsManager.shared.didToggleBluetooth("cgm re-setup")
-            if let cgmManager = UserDefaults.appGroup?.cgmManager {
-                self.cgmManager = cgmManager
+            DispatchQueue.main.async {
+                if let cgmManager = UserDefaults.appGroup?.cgmManager {
+                    self.cgmManager = cgmManager
+                }
+                self.setupCGM()
             }
-            self.setupCGM()
         }
         else if reason == "loop" {
             AnalyticsManager.shared.didToggleBluetooth("pump/cgm re-setup")
-            if let pumpManagerRawValue = UserDefaults.appGroup?.pumpManagerRawValue {
-                self.pumpManager = self.pumpManagerFromRawValue(pumpManagerRawValue)
-            }
-            self.setupPump()
-            if let cgmManager = UserDefaults.appGroup?.cgmManager {
-                self.cgmManager = cgmManager
-            }
-            self.setupCGM()
+            DispatchQueue.main.async {
 
+                if let pumpManagerRawValue = UserDefaults.appGroup?.pumpManagerRawValue {
+                    self.pumpManager = self.pumpManagerFromRawValue(pumpManagerRawValue)
+                }
+                self.setupPump()
+                if let cgmManager = UserDefaults.appGroup?.cgmManager {
+                    self.cgmManager = cgmManager
+                }
+                self.setupCGM()
+            }
         }
         else {
             AnalyticsManager.shared.didToggleBluetooth("BluetoothManagerHandler no valid reason: \(reason)")
