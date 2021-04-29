@@ -1327,7 +1327,7 @@ final class StatusTableViewController: ChartsTableViewController, MealTableViewC
                     self.deviceManager.enactBolus(units: dose.amount) { (error) in
                         DispatchQueue.main.async {
                             self.updateHUDandStatusRows(statusRowMode: .hidden, newSize: nil, animated: true)
-
+                            AnalyticsManager.shared.didToggleBluetooth("enactStatusView \(error)")
                             if let error = error {
                                 self.log.error("Failed to enact recommended bolus: %{public}@", String(describing: error))
                                 self.present(UIAlertController(with: error), animated: true)

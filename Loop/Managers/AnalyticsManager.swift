@@ -200,4 +200,8 @@ extension AnalyticsManager {
     func didAddCarbsFromFoodPicker(_ pick: FoodPick) {
         logEvent("AddCarbsFromFoodPicker \(pick.item.title): \(pick.displayCarbs)g ")
     }
+
+    func didToggleBluetooth(_ reason: String) {
+        logEvent("didToggleBluetooth \(reason)")
+    }
 }

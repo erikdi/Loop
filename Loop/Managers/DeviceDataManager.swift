@@ -218,6 +218,64 @@ final class DeviceDataManager {
             }
         }
         updatePumpManagerBLEHeartbeatPreference()
+        maybeToggleBluetooth("cgm")
+    }
+
+    private var btMagicDate : Date = Date()
+    func maybeToggleBluetooth(_ source: String, force: Bool = false) {
+      self.queue.async { // to avoid duplicate runs, btMagicDate.
+        var restartReason : String? = nil
+        if let reservoir = self.loopManager?.doseStore.lastReservoirValue,
+            reservoir.startDate.timeIntervalSinceNow <= TimeInterval(minutes: -30) {
+            restartReason = "pump"
+
+        } else if let glucose = self.loopManager?.glucoseStore.latestGlucose,
+            glucose.startDate.timeIntervalSinceNow <= TimeInterval(minutes: -30) {
+            restartReason = "cgm"
+        } else if let lastLoop = self.loopManager?.lastLoopCompleted,
+            lastLoop.timeIntervalSinceNow <= TimeInterval(minutes: -30) {
+            restartReason = "loop"
+        }
+        guard let reason = restartReason else {
+            return
+        }
+        if self.btMagicDate.timeIntervalSinceNow > TimeInterval(minutes: -30) {
+            NSLog("maybeToggleBluetooth - \(source) - tried recently \(self.btMagicDate)")
+            return
+        }
+        self.btMagicDate = Date()
+        AnalyticsManager.shared.didToggleBluetooth("\(source) - Reason \(reason) - Restarting Bluetooth, no data for 30 minutes (could also be out of range)")
+
+        if reason == "pump" {
+            AnalyticsManager.shared.didToggleBluetooth("pump re-setup")
+            if let pumpManagerRawValue = UserDefaults.appGroup?.pumpManagerRawValue {
+                self.pumpManager = self.pumpManagerFromRawValue(pumpManagerRawValue)
+            }
+            self.setupPump()
+        }
+        else if reason == "cgm" {
+            AnalyticsManager.shared.didToggleBluetooth("cgm re-setup")
+            if let cgmManager = UserDefaults.appGroup?.cgmManager {
+                self.cgmManager = cgmManager
+            }
+            self.setupCGM()
+        }
+        else if reason == "loop" {
+            AnalyticsManager.shared.didToggleBluetooth("pump/cgm re-setup")
+            if let pumpManagerRawValue = UserDefaults.appGroup?.pumpManagerRawValue {
+                self.pumpManager = self.pumpManagerFromRawValue(pumpManagerRawValue)
+            }
+            self.setupPump()
+            if let cgmManager = UserDefaults.appGroup?.cgmManager {
+                self.cgmManager = cgmManager
+            }
+            self.setupCGM()
+
+        }
+        else {
+            AnalyticsManager.shared.didToggleBluetooth("BluetoothManagerHandler no valid reason: \(reason)")
+        }
+      }
     }
 
     func generateDiagnosticReport(_ completion: @escaping (_ report: String) -> Void) {
@@ -311,10 +369,14 @@ extension DeviceDataManager {
         self.loopManager.addRequestedBolus(DoseEntry(type: .bolus, startDate: Date(), value: units, unit: .units), completion: nil)
         pumpManager.enactBolus(units: units, at: startDate, willRequest: { (dose) in
             // No longer used...
+            AnalyticsManager.shared.didToggleBluetooth("enactBolus manual willRequest")
+
         }) { (result) in
             // This is a race condition as pumpManager.status.device can have changed,
             // the alternative would be to pipe it though the DoseEntry callback, which
             // is cumbersome.
+            AnalyticsManager.shared.didToggleBluetooth("enactBolus manual result \(result)")
+
             self.nightscoutDataManager.uploadLog(date: Date(), level: "info", note: "Bolus by \(pumpManager.status.device.debugDescription)")
             switch result {
             case .failure(let error):
@@ -467,6 +529,7 @@ extension DeviceDataManager: PumpManagerDelegate {
         }
         lastBLEDrivenUpdate = Date()
         loopManager.loop(trigger: "BLEHeartbeat")
+        maybeToggleBluetooth("pump")
     }
 
     func pumpManagerMustProvideBLEHeartbeat(_ pumpManager: PumpManager) -> Bool {
@@ -733,8 +796,10 @@ extension DeviceDataManager: LoopDataManagerDelegate {
                 self.log.default("LoopManager did recommend bolus dose")
                 doseDispatchGroup.enter()
                 pumpManager.enactBolus(units: automaticDose.recommendation.bolusUnits, at: Date(), willRequest: { (dose) in
+                    AnalyticsManager.shared.didToggleBluetooth("enactBolus automatic willRequest")
                     self.log.default("PumpManager willRequest bolus")
                 }) { (result) in
+                    AnalyticsManager.shared.didToggleBluetooth("enactBolus automatic result \(result)")
                     switch result {
                     case .failure(let error):
                         bolusError = error
