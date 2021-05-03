@@ -63,6 +63,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDe
         return deviceManager?.remoteDataManager.nightscoutService.siteURL
     }
 
+    private var locationManager = CLLocationManager()
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
         log.default("didFinishLaunchingWithOptions \(String(describing: launchOptions))")
@@ -84,31 +86,43 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDe
 
         UIApplication.shared.setMinimumBackgroundFetchInterval(300)
 
+        UIApplication.shared.registerForRemoteNotifications()
+
         if CLLocationManager.significantLocationChangeMonitoringAvailable() {
             // The device does not support this service.
-            let locationManager = CLLocationManager()
+
+            locationManager.requestAlwaysAuthorization()
             locationManager.delegate? = self
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.startMonitoringSignificantLocationChanges()
+            locationManager.pausesLocationUpdatesAutomatically = false
+
+            //if locationManager.authorizationStatus == .none {
+
+            //}
             log.error("Location Service for significant changes enabled.")
         } else {
             log.error("Location Service not available.")
         }
-//        if #available(iOS 13.0, *) {
-//            BGTaskScheduler.shared.register(
-//                forTaskWithIdentifier: "com.loop.refresh",
-//                using: DispatchQueue.global()
-//            ) { task in
-//                self.handleAppRefresh(task)
-//            }
-//        } else {
-//            // Fallback on earlier versions
-//        }
+        if #available(iOS 13.0, *) {
+            BGTaskScheduler.shared.register(
+                forTaskWithIdentifier: "com.loop.refresh",
+                using: DispatchQueue.global()
+            ) { task in
+                NSLog("Background App Refresh")
+                //self.handleAppRefresh(task)
+            }
+            scheduleAppRefresh()
+        } else {
+            // Fallback on earlier versions
+        }
         return true
     }
 
-
-//    private func handleAppRefresh(_ task: BGTask) {
+    @available(iOS 13.0, *)
+    private func handleAppRefresh(_ task: BGTask) {
+        NSLog("background handleAppRefresh")
+        refreshBackground("BGFetch")
 //        let queue = OperationQueue()
 //        queue.maxConcurrentOperationCount = 1
 //        let appRefreshOperation = AppRefreshOperation()
@@ -122,19 +136,23 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDe
 //        lastOperation?.completionBlock = {
 //            task.setTaskCompleted(success: !(lastOperation?.isCancelled ?? false))
 //        }
-//
-//        scheduleAppRefresh()
-//    }
-//
-//    private func scheduleAppRefresh() {
-//        let request = BGAppRefreshTaskRequest(identifier: "com.loop.refresh")
-//        request.earliestBeginDate = Date(timeIntervalSinceNow: 300)
-//        do {
-//            try BGTaskScheduler.shared.submit(request)
-//        } catch {
-//            self.log.error(error)
-//        }
-//    }
+
+        scheduleAppRefresh()
+    }
+
+
+    private func scheduleAppRefresh() {
+        if #available(iOS 13.0, *) {
+            NSLog("background scheduleAppRefresh")
+            let request = BGAppRefreshTaskRequest(identifier: "com.loop.refresh")
+            request.earliestBeginDate = Date(timeIntervalSinceNow: 300)
+            do {
+                try BGTaskScheduler.shared.submit(request)
+            } catch {
+                self.log.error(error)
+            }
+        }
+    }
 
     func applicationWillResignActive(_ application: UIApplication) {
         log.default(#function)
@@ -216,10 +234,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDe
         let token = tokenParts.joined()
         log.default("RemoteNotifications device token: \(token)")
         deviceManager?.loopManager.settings.deviceToken = deviceToken
+        AnalyticsManager.shared.didReceiveRemoteToken("\(token)")
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        log.error("Failed to register: \(error)")
+        log.error("Failed to register for remote notifications: \(error)")
     }
     
     func application(_ application: UIApplication,

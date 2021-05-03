@@ -100,6 +100,9 @@ enum LoopError: Error {
     
     // Pump Suspended
     case pumpSuspended
+
+    // Bolus already in progress
+    case bolusInProgress(details: String)
 }
 
 
@@ -141,6 +144,8 @@ extension LoopError: LocalizedError {
             return String(format: NSLocalizedString("Invalid data: %1$@", comment: "The error message when invalid data was encountered. (1: details of invalid data)"), details)
         case .pumpSuspended:
             return NSLocalizedString("Pump Suspended", comment: "The error message when loop failed because the pump was encountered.")
+        case .bolusInProgress(details: let details):
+            return String(format: NSLocalizedString("Bolus In Progress: %1$@", comment: "The error message when bolus was in progress. (1: details of bolus progress)"), details)
         }
     }
 }

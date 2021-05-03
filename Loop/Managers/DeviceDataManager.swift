@@ -243,11 +243,14 @@ final class DeviceDataManager {
             NSLog("maybeToggleBluetooth - \(source) - tried recently \(self.btMagicDate)")
             return
         }
-        self.btMagicDate = Date()
         AnalyticsManager.shared.didToggleBluetooth("\(source) - Reason \(reason) - Restarting, no data for \(self.btMagicDate.timeIntervalSinceNow) (could also be out of range)")
+        self.btMagicDate = Date()
 
         if reason == "pump" {
             AnalyticsManager.shared.didToggleBluetooth("pump re-setup")
+            /*self.pumpManager?.reconnect { (error) in
+                AnalyticsManager.shared.didToggleBluetooth("PumpManager Reconnect \(error)")
+            }*/
             DispatchQueue.main.async {
 
                 if let pumpManagerRawValue = UserDefaults.appGroup?.pumpManagerRawValue {

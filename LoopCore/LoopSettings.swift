@@ -96,7 +96,7 @@ public struct LoopSettings: Equatable {
 //    public var autotune = AutotuneSettings()
 //    struct AutosenseSettings {
         public var lastAutosense : Date = .distantPast
-        public let autosenseInterval = TimeInterval(minutes: 1)
+        public let autosenseInterval = TimeInterval(minutes: 15)
         public let autosenseLookbackInterval = TimeInterval(hours: 4)
         public var autosenseFactor : Double = 1.0
         public var autosenseEnabled : Bool = true

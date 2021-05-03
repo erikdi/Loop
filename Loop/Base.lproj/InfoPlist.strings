@@ -16,3 +16,6 @@
 /* Privacy - Health Update Usage Description */
 "NSHealthUpdateUsageDescription" = "Carbohydrate meal data entered in the app and on the watch is stored in the Health database. Glucose data retrieved from the CGM is stored securely in HealthKit.";
 
+"NSLocationAlwaysUsageDescription" = "Trigger updates";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Trigger updates";
+"NSLocationWhenInUseUsageDescription" = "Trigger updates";

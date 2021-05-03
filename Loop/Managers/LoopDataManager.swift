@@ -719,7 +719,13 @@ extension LoopDataManager {
         self.dataAccessQueue.async {
             if let progress = self.loopInProgress, progress.uuid != uuidString {
                 self.logger.default("Loop already in progress - \(progress.uuid) - Trigger \(trigger) - Try \(retries)")
-                AnalyticsManager.shared.loopInProgress("\(progress.uuid) - Started \(progress.date) - Trigger \(trigger) - Try \(retries)")
+
+                if abs(progress.date.timeIntervalSinceNow) > TimeInterval(minutes: 15) {
+                    self.loopInProgress = nil
+                    AnalyticsManager.shared.loopInProgress("\(progress.uuid) - Started \(progress.date) - Trigger \(trigger) - Try \(retries) - Cancelling running for too long (this is a bug!)")
+                } else {
+                    AnalyticsManager.shared.loopInProgress("\(progress.uuid) - Started \(progress.date) - Trigger \(trigger) - Try \(retries)")
+                }
                 return
             }
             let date = self.loopInProgress?.date ?? Date()
@@ -766,8 +772,8 @@ extension LoopDataManager {
 
             self.loopInProgress = nil
             self.notify(forChange: .tempBasal)
-            if self.lastLoopError != nil {
-                // This gets run pretty rarely
+            if self.lastLoopError == nil {
+                // This gets run pretty rarely and is rate limited in the functions itself
                 self.logger.debug("before AutoAdjust")
                 let autoSense = AutoSense(manager: self)
                 autoSense.run()
@@ -1419,12 +1425,21 @@ extension LoopDataManager {
         else {
             throw LoopError.configurationError(.generalSettings)
         }
-        
+
+        if let req = lastRequestedBolus {
+            if req.endDate.timeIntervalSinceNow < TimeInterval(minutes: -5) {
+                AnalyticsManager.shared.didAbortBolus("bolus too old \(req.endDate)")
+                lastRequestedBolus = nil
+                // self.bolusRequestFailed()
+            }
+        }
+
         guard lastRequestedBolus == nil
         else {
             // Don't recommend changes if a bolus was just requested.
             // Sending additional pump commands is not going to be
             // successful in any case.
+
             self.logger.debug("Not generating recommendations because bolus request is in progress.")
             return
         }

@@ -345,7 +345,7 @@ class AutoSense : AutoAdjust {
         let roundedAutosenseFactor = round(autosenseFactor * 10) / 10
 
         AnalyticsManager.shared.didAutoSense(
-            "Autosense analyzedInterval \(analyzedInterval) " +
+            "analyzedInterval \(analyzedInterval) " +
             "#\(dataPoints) " +
             "high \(cumulativeTimeHigh) / \(highRatio), low \(cumulativeTimeLow) / \(lowRatio), " +
             "average \(averageBG), current \(currentBG), " +

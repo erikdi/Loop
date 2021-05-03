@@ -219,4 +219,11 @@ extension AnalyticsManager {
     func didStats(_ reason: String) {
         logEvent("didStats \(reason)")
     }
+    func didAbortBolus(_ reason: String) {
+        logEvent("didAbortBolus \(reason)")
+    }
+    func didReceiveRemoteToken(_ token: String) {
+        logEvent("didReceiveRemoteToken \(token)")
+    }
+
 }
