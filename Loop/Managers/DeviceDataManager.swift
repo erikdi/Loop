@@ -247,10 +247,10 @@ final class DeviceDataManager {
         self.btMagicDate = Date()
 
         if reason == "pump" {
-            AnalyticsManager.shared.didToggleBluetooth("pump re-setup")
+            AnalyticsManager.shared.didToggleBluetooth("pump re-setup, skipped")
             /*self.pumpManager?.reconnect { (error) in
                 AnalyticsManager.shared.didToggleBluetooth("PumpManager Reconnect \(error)")
-            }*/
+            }
             DispatchQueue.main.async {
 
                 if let pumpManagerRawValue = UserDefaults.appGroup?.pumpManagerRawValue {
@@ -258,7 +258,9 @@ final class DeviceDataManager {
                 }
 
                 self.setupPump()
+                AnalyticsManager.shared.didToggleBluetooth("pump re-setup complete")
             }
+            */
         }
         else if reason == "cgm" {
             AnalyticsManager.shared.didToggleBluetooth("cgm re-setup")
@@ -267,6 +269,8 @@ final class DeviceDataManager {
                     self.cgmManager = cgmManager
                 }
                 self.setupCGM()
+                AnalyticsManager.shared.didToggleBluetooth("cgm re-setup complete")
+
             }
         }
         else if reason == "loop" {
@@ -281,6 +285,8 @@ final class DeviceDataManager {
                     self.cgmManager = cgmManager
                 }
                 self.setupCGM()
+                AnalyticsManager.shared.didToggleBluetooth("pump/cgm re-setup complete")
+
             }
         }
         else {
@@ -377,7 +383,12 @@ extension DeviceDataManager {
             completion(LoopError.configurationError(.pumpManager))
             return
         }
-        self.loopManager.addRequestedBolus(DoseEntry(type: .bolus, startDate: Date(), value: units, unit: .units), completion: nil)
+        self.loopManager.addRequestedBolus(DoseEntry(type: .bolus, startDate: Date(), value: units, unit: .units)) { (error) in
+            if let error = error {
+                // don't conflict with existing bolus.
+                completion(error)
+                return
+            }
         pumpManager.enactBolus(units: units, at: startDate, willRequest: { (dose) in
             // No longer used...
             AnalyticsManager.shared.didToggleBluetooth("enactBolus manual willRequest")
@@ -391,7 +402,6 @@ extension DeviceDataManager {
             self.nightscoutDataManager.uploadLog(date: Date(), level: "info", note: "Bolus by \(pumpManager.status.device.debugDescription)")
             switch result {
             case .failure(let error):
-                self.log.error(error)
                 NotificationManager.sendBolusFailureNotification(for: error, units: units, at: startDate)
                 self.loopManager.bolusRequestFailed(error) {
                     completion(error)
@@ -401,6 +411,7 @@ extension DeviceDataManager {
                     completion(nil)
                 }
             }
+        }
         }
     }
 
@@ -774,7 +785,8 @@ extension DeviceDataManager: LoopDataManagerDelegate {
             completion(LoopError.configurationError(.pumpManager))
             return
         }
-        
+        AnalyticsManager.shared.didToggleBluetooth("enactBolus didRecommend")
+
         dosingQueue.async {
             let doseDispatchGroup = DispatchGroup()
             

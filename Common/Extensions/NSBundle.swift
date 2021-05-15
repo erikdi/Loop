@@ -13,7 +13,9 @@ extension Bundle {
     var shortVersionString: String {
         return object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
     }
-
+    var versionString: String {
+        return object(forInfoDictionaryKey: "CFBundleVersion") as! String
+    }
     var bundleDisplayName: String {
         return object(forInfoDictionaryKey: "CFBundleDisplayName") as! String
     }

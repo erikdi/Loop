@@ -109,8 +109,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDe
                 forTaskWithIdentifier: "com.loop.refresh",
                 using: DispatchQueue.global()
             ) { task in
-                NSLog("Background App Refresh")
-                //self.handleAppRefresh(task)
+                NSLog("background app refresh")
+                self.handleAppRefresh(task)
             }
             scheduleAppRefresh()
         } else {

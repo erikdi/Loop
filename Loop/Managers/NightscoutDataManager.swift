@@ -322,8 +322,9 @@ final class NightscoutDataManager {
 
 
             if abs(self.lastRadioUpload.timeIntervalSinceNow) > .minutes(30) {
-                self.uploadLog(date: Date(), level: "Radio", note:
-                    String(describing: pumpManagerStatus.rileyLinkStatus))
+                // Never uploading more than an empty list?
+//                self.uploadLog(date: Date(), level: "Radio", note:
+//                    String(describing: pumpManagerStatus.rileyLinkStatus))
                 self.lastRadioUpload = Date()
             }
 

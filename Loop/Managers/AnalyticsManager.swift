@@ -40,6 +40,10 @@ final class AnalyticsManager: IdentifiableClass {
 
     private func logEvent(_ name: String, withProperties properties: [AnyHashable: Any]? = nil, outOfSession: Bool = false) {
         amplitudeService.client?.logEvent(name, withEventProperties: properties, outOfSession: outOfSession)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 2
+        formatter.roundingMode = .halfUp
 
         // let propertyDescription = (properties == nil) ? "" : " \(String(describing: properties))"
         var desc : [String] = []
@@ -57,6 +61,11 @@ final class AnalyticsManager: IdentifiableClass {
                 val = str
             case let i as Int:
                 val = "\(i)"
+            case let i as Double:
+                val = (formatter.string(for: i) ?? "\(i)")
+                if key == "duration" {
+                    val = val + "s"
+                }
             default:
                 break
             }

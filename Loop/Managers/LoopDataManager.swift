@@ -598,13 +598,17 @@ extension LoopDataManager {
     ///
     /// - Parameters:
     ///   - dose: The DoseEntry representing the requested bolus
-    func addRequestedBolus(_ dose: DoseEntry, completion: (() -> Void)?) {
+    func addRequestedBolus(_ dose: DoseEntry, completion: ((_ error: Error?) -> Void)?) {
         dataAccessQueue.async {
             self.logger.debug("addRequestedBolus")
-            self.lastRequestedBolus = dose
-            self.notify(forChange: .bolus)
+            if self.lastRequestedBolus != nil {
+                completion?(LoopError.bolusInProgress(details: "added Bolus already"))
+            } else {
+                self.lastRequestedBolus = dose
+                self.notify(forChange: .bolus)
 
-            completion?()
+                completion?(nil)
+            }
         }
     }
 
@@ -705,7 +709,7 @@ extension LoopDataManager {
     func enactRecommendedDose(_ completion: @escaping (_ error: Error?) -> Void) {
         self.logger.default("enactRecommendedDose")
         dataAccessQueue.async {
-            self.enactDose(completion)
+            self.enactDose(caller: "enactRecommendedDose", completion)
         }
     }
 
@@ -714,7 +718,7 @@ extension LoopDataManager {
     /// Executes an analysis of the current data, and recommends an adjustment to the current
     /// temporary basal rate.
     func loop(trigger: String, retries: Int = 0, uuid: String? = nil) {
-        let uuidString: String = uuid ?? UUID().uuidString
+        let uuidString: String = uuid ?? (String(UUID().uuidString.split(separator: "-").first!))
         NSLog("loop.loop \(uuidString)")
         self.dataAccessQueue.async {
             if let progress = self.loopInProgress, progress.uuid != uuidString {
@@ -722,9 +726,9 @@ extension LoopDataManager {
 
                 if abs(progress.date.timeIntervalSinceNow) > TimeInterval(minutes: 15) {
                     self.loopInProgress = nil
-                    AnalyticsManager.shared.loopInProgress("\(progress.uuid) - Started \(progress.date) - Trigger \(trigger) - Try \(retries) - Cancelling running for too long (this is a bug!)")
+                    AnalyticsManager.shared.loopInProgress("\(progress.uuid) - Trigger \(trigger) - Try \(retries) - Cancelling running for too long (this is a bug!)")
                 } else {
-                    AnalyticsManager.shared.loopInProgress("\(progress.uuid) - Started \(progress.date) - Trigger \(trigger) - Try \(retries)")
+                    AnalyticsManager.shared.loopInProgress("\(progress.uuid) - Trigger \(trigger) - Try \(retries)")
                 }
                 return
             }
@@ -741,7 +745,7 @@ extension LoopDataManager {
                 try self.update()
 
                 if self.settings.dosingEnabled && self.isAutomaticDosingAllowed() {
-                    self.enactDose { (error) -> Void in
+                    self.enactDose(caller: "loop \(uuidString)") { (error) -> Void in
                         self.lastLoopError = error
                         if let error = error {
                             if retries < 4 {
@@ -1571,9 +1575,13 @@ extension LoopDataManager {
     }
 
     /// *This method should only be called from the `dataAccessQueue`*
-    private func enactDose(_ completion: @escaping (_ error: Error?) -> Void) {
+    private func enactDose(caller: String, _ completion: @escaping (_ error: Error?) -> Void) {
         dispatchPrecondition(condition: .onQueue(dataAccessQueue))
 
+        guard lastRequestedBolus == nil else {
+            completion(LoopError.bolusInProgress(details: "enactDose"))
+            return
+        }
         guard let recommendedDose = self.recommendedDose else {
             completion(nil)
             return
@@ -1589,9 +1597,9 @@ extension LoopDataManager {
             return
         }
         if recommendedDose.recommendation.bolusUnits > 0 {
-            logger.info("Automatic Dose: \(recommendedDose.recommendation.bolusUnits) U")
+            logger.info("Automatic Dose \(caller): \(recommendedDose.recommendation.bolusUnits) U")
         } else if let basal = recommendedDose.recommendation.basalAdjustment {
-            logger.info("Automatic Dose: \(basal.unitsPerHour) U/h for \(basal.duration) s")
+            logger.info("Automatic Dose \(caller): \(basal.unitsPerHour) U/h for \(basal.duration) s")
         }
         delegate?.loopDataManager(self, didRecommend: recommendedDose) { (error) in
             self.dataAccessQueue.async {

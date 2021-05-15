@@ -11,12 +11,12 @@
 MAIN_APP_BUNDLE_IDENTIFIER = com.${DEVELOPMENT_TEAM}.loopkit
 MAIN_APP_DISPLAY_NAME = Loop
 
-LOOP_MARKETING_VERSION = 2.3.0.20210429
+LOOP_MARKETING_VERSION = 2.3.0
 
 APPICON_NAME = AppIcon
 
 DEVELOPMENT_TEAM_ID = 
 
 // Optional workspace configuration overrides
-#include? "../LoopConfigOverride.xcconfig"
+#include "../LoopConfigOverride.xcconfig"
 
