@@ -115,7 +115,7 @@ final class CategoryLogger {
             return
         } else {
             if (duplicateMessageCount > 0) {
-                logger.nightscoutDataManager?.uploadLog(date: Date(), level: type.tagName, note: "[x\(duplicateMessageCount)] \(message)")
+                logger.nightscoutDataManager?.uploadLog(date: Date(), level: type.tagName, note: "[x\(duplicateMessageCount)] \(lastMessage)")
             }
             duplicateMessageCount = 0
         }

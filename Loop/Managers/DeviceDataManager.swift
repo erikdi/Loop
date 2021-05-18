@@ -276,16 +276,17 @@ final class DeviceDataManager {
         else if reason == "loop" {
             AnalyticsManager.shared.didToggleBluetooth("pump/cgm re-setup")
             DispatchQueue.main.async {
-
+                /*
                 if let pumpManagerRawValue = UserDefaults.appGroup?.pumpManagerRawValue {
                     self.pumpManager = self.pumpManagerFromRawValue(pumpManagerRawValue)
                 }
                 self.setupPump()
+                */
                 if let cgmManager = UserDefaults.appGroup?.cgmManager {
                     self.cgmManager = cgmManager
                 }
                 self.setupCGM()
-                AnalyticsManager.shared.didToggleBluetooth("pump/cgm re-setup complete")
+                AnalyticsManager.shared.didToggleBluetooth("pump re-setup skipped/cgm re-setup complete")
 
             }
         }
